@@ -1,0 +1,12 @@
+#include <windows.h>
+#include <ntverp.h>
+
+#undef  VER_PRODUCTNAME_STR
+#define VER_PRODUCTNAME_STR         "ShadowRun"
+#define VER_FILETYPE                VFT_APP
+#define VER_FILESUBTYPE             VFT2_UNKNOWN
+#define VER_FILEDESCRIPTION_STR     "ShadowRun, Volume Shadow Copy Runner"
+#define VER_INTERNALNAME_STR        "ShadowRun.exe"
+#define VER_ORIGINALFILENAME_STR    VER_INTERNALNAME_STR
+
+#include "common.ver"
