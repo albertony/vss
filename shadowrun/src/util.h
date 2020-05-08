@@ -3,13 +3,15 @@
 #include <resapi.h>
 #include "stdafx.h"
 
+// COM interface smart pointer types (_com_ptr_t)
+_COM_SMARTPTR_TYPEDEF(IVssBackupComponents, __uuidof(IVssBackupComponents)); // typedef _com_ptr_t<...> IVssBackupComponentsPtr;
+_COM_SMARTPTR_TYPEDEF(IVssBackupComponentsEx4, __uuidof(IVssBackupComponentsEx4)); // typedef _com_ptr_t<...> IVssBackupComponentsEx4Ptr;
+
+
 //for IsUNCPath method
 #define     UNC_PATH_PREFIX1        (L"\\\\?\\UNC\\")
 #define     NONE_UNC_PATH_PREFIX1   (L"\\\\?\\")
 #define     UNC_PATH_PREFIX2        (L"\\\\")
-
-_COM_SMARTPTR_TYPEDEF(IVssBackupComponents, __uuidof(IVssBackupComponents)); // typedef _com_ptr_t<...> IVssBackupComponentsPtr;
-_COM_SMARTPTR_TYPEDEF(IVssBackupComponentsEx4, __uuidof(IVssBackupComponentsEx4)); // typedef _com_ptr_t<...> IVssBackupComponentsEx4Ptr;
 
 
 /////////////////////////////////////////////////////////////////////////
@@ -210,7 +212,7 @@ inline bool IsEqual(wstring str1, wstring str2)
 inline bool FindStringInList(wstring str, vector<wstring> stringList)
 {
     // Check to see if the volume is already added 
-    for (unsigned i = 0; i < stringList.size( ); i++)
+    for (size_t i = 0; i < stringList.size( ); ++i)
         if (IsEqual(str, stringList[i]))
             return true;
 
@@ -499,7 +501,7 @@ inline void WriteFile(wstring fileName, wstring contents)
 
 
 // Execute a command
-inline void ExecCommand(wstring execCommand)
+inline void ExecCommand(wstring command, vector<wstring> arguments)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -510,7 +512,7 @@ inline void ExecCommand(wstring execCommand)
     si.cb = sizeof(si);
     ZeroMemory( &pi, sizeof(pi) );
 
-    ft.WriteLine(L"- Executing command '%s' ...", execCommand.c_str());
+    ft.WriteLine(L"- Executing command '%s' ...", command.c_str());
     ft.WriteLine(L"-----------------------------------------------------");
 
     //
@@ -534,11 +536,19 @@ inline void ExecCommand(wstring execCommand)
     //
 
     // Prepend/append the command with double-quotes. This will prevent adding parameters
-    execCommand = wstring(L"\"") + execCommand + wstring(L"\"");
+    command = wstring(L"\"") + command + wstring(L"\"");
+    for (size_t i = 0; i < arguments.size(); ++i) {
+        command += wstring(L" \"") + arguments[i] + wstring(L"\"");
+    }
 
-    // Start the child process. 
+    // Note: By not setting module name but sending command as first string of the
+    // command line it can be name of a batch script and it will be executed directly,
+    // without having to explicitely specify "cmd" as the module and "/c <command>"
+    // as the command line.
+
+    // Start the child process.
     CHECK_WIN32( CreateProcess( NULL, // No module name (use command line). 
-        (LPWSTR)execCommand.c_str(), // Command line. 
+        (LPWSTR)command.c_str(), // Command line. 
         NULL,             // Process handle not inheritable. 
         NULL,             // Thread handle not inheritable. 
         FALSE,            // Set handle inheritance to FALSE. 
@@ -561,7 +571,7 @@ inline void ExecCommand(wstring execCommand)
     CHECK_WIN32( GetExitCodeProcess( pi.hProcess, &dwExitCode ) );
     if (dwExitCode != 0)
     {
-        ft.WriteLine(L"ERROR: Command line '%s' failed!. Aborting the backup...", execCommand.c_str());
+        ft.WriteLine(L"ERROR: Command line '%s' failed!. Aborting the backup...", command.c_str());
         ft.WriteLine(L"- Returned error code: %d", dwExitCode);
         throw(E_UNEXPECTED);
     }

@@ -15,9 +15,9 @@
 // _ASSERTE declaration (used by ATL) and otehr macros
 #include "macros.h"
 
-#include <shlwapi.h>
-//#define _COM_SMARTPTR
 #include <comdef.h>
+#include <shlwapi.h>
+
 
 // STL includes
 #include <vector>
@@ -25,10 +25,13 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 using namespace std;
 
 // Used for safe string manipulation
+// Needed for a single call, to StringCchPrintfW, in implementation of Guid2WString(GUID guid).
 #include <strsafe.h>
 
+// Base header for this application
 #include "shadow.h"

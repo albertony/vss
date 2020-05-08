@@ -9,9 +9,6 @@
 //
 
 
-_COM_SMARTPTR_TYPEDEF(IVssBackupComponents, __uuidof(IVssBackupComponents)); // typedef _com_ptr_t<...> IVssBackupComponentsPtr;
-
-
 class VssClient
 {
 public:
@@ -37,6 +34,9 @@ public:
     
     // Effectively creating the shadow copy (calling DoSnapshotSet)
     void DoSnapshotSet();
+
+    // Set environment variables for this shadow copy set
+    void Setvar();
 
     // Generate the SETVAR script for this shadow copy set
     void GenerateSetvarScript(wstring stringFileName);

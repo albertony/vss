@@ -30,7 +30,7 @@ void VssClient::Initialize()
     FunctionTracer ft(DBG_INFO);
 
     // Initialize COM 
-    CHECK_COM( CoInitialize(NULL) );
+    CHECK_COM(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE));
     m_bCoInitializeCalled = true;
 
     // Initialize COM security
@@ -48,7 +48,7 @@ void VssClient::Initialize()
             ) );
 
     // Create the internal backup components object
-    CHECK_COM( CreateVssBackupComponents(&m_pVssObject) );
+    CHECK_COM(CreateVssBackupComponents(&m_pVssObject));
     
     // Initialize for backup
     CHECK_COM(m_pVssObject->InitializeForBackup())
@@ -56,7 +56,7 @@ void VssClient::Initialize()
     // Set the context, different than the default context
     DWORD dwContext = VSS_CTX_FILE_SHARE_BACKUP; // Specifies an auto-release, nonpersistent shadow copy created without writer involvement.
     ft.WriteLine(L"- Setting the VSS context to: 0x%08lx", dwContext);
-    CHECK_COM(m_pVssObject->SetContext(dwContext) );
+    CHECK_COM(m_pVssObject->SetContext(dwContext));
 
     // Set various properties per backup components instance
     CHECK_COM(m_pVssObject->SetBackupState(true, true, VSS_BT_FULL, false));

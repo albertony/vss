@@ -27,7 +27,7 @@ void VssClient::AddToSnapshotSet(vector<wstring> volumeList)
     _ASSERTE(m_latestSnapshotIdList.size() == 0);
 
     // Add volumes to the shadow set 
-    for (unsigned i = 0; i < volumeList.size(); i++)
+    for (size_t i = 0; i < volumeList.size(); ++i)
     {
         wstring volume = volumeList[i];
         ft.WriteLine(L"- Adding volume %s [%s] to the shadow set...",
@@ -59,7 +59,6 @@ void VssClient::DoSnapshotSet()
 }
 
 // Generate the SETVAR script
-// This is useful for management operations
 void VssClient::GenerateSetvarScript(wstring stringFileName)
 {
     FunctionTracer ft(DBG_INFO);
@@ -76,7 +75,7 @@ void VssClient::GenerateSetvarScript(wstring stringFileName)
     ofile << L"SET SHADOW_SET_ID=" << snapshotSetID.c_str() << L"\n";
     
     // For each added volume add the SHADOWRUN.EXE exposure command
-    for (unsigned i = 0; i < m_latestSnapshotIdList.size(); i++)
+    for (size_t i = 0; i < m_latestSnapshotIdList.size(); ++i)
     {
         wstring snapshotID = Guid2WString(m_latestSnapshotIdList[i]);
         ofile << L"SET SHADOW_ID_" << i+1 << L"=" << snapshotID.c_str() << L"\n";
@@ -93,5 +92,37 @@ void VssClient::GenerateSetvarScript(wstring stringFileName)
 
     ofile.close();
 }
+
+// Update environment variables of the current process, which will be inherited by created child process.
+void VssClient::Setvar()
+{
+    FunctionTracer ft(DBG_INFO);
+
+    ft.WriteLine(L"Setting environment variables ");
+
+    wstring snapshotSetID = Guid2WString(m_latestSnapshotSetID);
+    CHECK_WIN32(SetEnvironmentVariable((LPCWSTR)L"SHADOW_SET_ID", snapshotSetID.c_str()));
+
+    // For each added volume add the SHADOWRUN.EXE exposure command
+    for (size_t i = 0; i < m_latestSnapshotIdList.size(); ++i)
+    {
+        wostringstream nameBuilder;
+        nameBuilder << L"SET SHADOW_ID_" << i+1;
+        wstring snapshotID = Guid2WString(m_latestSnapshotIdList[i]);
+        CHECK_WIN32(SetEnvironmentVariable((LPCWSTR)nameBuilder.str().c_str(), snapshotID.c_str()));
+
+        // Get shadow copy device (if the snapshot is there)
+        VSS_SNAPSHOT_PROP Snap;
+        CHECK_COM(m_pVssObject->GetSnapshotProperties(WString2Guid(snapshotID), &Snap));
+
+        // Automatically call VssFreeSnapshotProperties on this structure at the end of scope
+        CAutoSnapPointer snapAutoCleanup(&Snap);
+
+        nameBuilder.clear();
+        nameBuilder << L"SET SHADOW_DEVICE_" << i+1;
+        CHECK_WIN32(SetEnvironmentVariable((LPCWSTR)nameBuilder.str().c_str(), Snap.m_pwszSnapshotDeviceObject));
+    }
+}
+
 
 

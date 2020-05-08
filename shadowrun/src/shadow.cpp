@@ -90,22 +90,31 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
 
     // The script file prefix 
     // Non-empty if scripts have to be generated 
-    wstring stringFileName;
+    wstring setvarScript;
 
-    // Script to execute between snapshot creation and backup complete
+    // Command/script to execute between snapshot creation and backup complete
     wstring execCommand;
 
+    // Additional arguments to the execCommand
+    vector<wstring> execArguments;
+
+    // Modify process environment option corresponding to SETVAR script
+    bool setProcessEnvironment = false;
+
+    // Argument handling mode where all remaining arguments are just passed into execArguments.
+    bool passThrough = false;
+
     // Enumerate each argument
-    for(unsigned argIndex = 0; argIndex < arguments.size(); argIndex++)
+    for(size_t argIndex = 0; argIndex < arguments.size(); ++argIndex)
     {
         //
         //  Flags
         //
 
         // Check for the script generation option
-        if (MatchArgument(arguments[argIndex], L"script", stringFileName))
+        if (MatchArgument(arguments[argIndex], L"script", setvarScript))
         {
-            ft.WriteLine(L"(Option: Generate SETVAR script '%s')", stringFileName.c_str());
+            ft.WriteLine(L"(Option: Generate SETVAR script '%s')", setvarScript.c_str());
             continue;
         }
 
@@ -134,10 +143,26 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             continue;
         }
 
+        // Check for the environment option
+        if (MatchArgument(arguments[argIndex], L"env"))
+        {
+            ft.WriteLine(L"(Option: Modify process environment corresponding to SETVAR)");
+            setProcessEnvironment = true;
+            continue;
+        }
+
+        // Check for the script generation option
+        wstring value;
+        if (MatchArgument(arguments[argIndex], L"arg", value))
+        {
+            execArguments.push_back(value);
+            ft.WriteLine(L"(Option: Including additional argument when executing binary/script '%s')", value.c_str());
+            continue;
+        }
+
         // Check for /? or -?
         if (MatchArgument(arguments[argIndex], L"?"))
             break;
-
 
         // Check if the arguments are volumes or file share paths. If yes, try to create the shadow copy set 
         if (IsVolume(arguments[argIndex]) || IsUNCPath((VSS_PWSZ)arguments[argIndex].c_str()))
@@ -147,50 +172,67 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             ft.Trace(DBG_INFO, L"\nAttempting to create a shadow copy set... (volume %s was added as parameter)", arguments[argIndex].c_str());
 
             // Make sure that all the arguments are volumes
-            vector<wstring> volumeList; 
+            vector<wstring> volumeList;
             volumeList.push_back(GetUniqueVolumeNameForPath(arguments[argIndex], true));
 
             // Process the rest of the arguments
-            for(unsigned i = argIndex + 1; i < arguments.size(); i++)
+            for (++argIndex; argIndex < arguments.size(); ++argIndex)
             {
-                if (!(IsVolume(arguments[i]) || IsUNCPath((VSS_PWSZ)arguments[i].c_str())))
+                if (passThrough)
+                {
+                    // Pass argument directly on to the exec command
+                    execArguments.push_back(arguments[argIndex]);
+                    continue;
+                }
+                else if (MatchArgument(arguments[argIndex], L"-"))
+                {
+                    // Enable pass through mode
+                    passThrough = true;
+                }
+                else if (!(IsVolume(arguments[argIndex]) || IsUNCPath((VSS_PWSZ)arguments[argIndex].c_str())))
                 {
                     // No match. Print an error and the usage
                     ft.WriteLine(L"\nERROR: invalid parameters %s", GetCommandLine());
-                    ft.WriteLine(L"- Parameter %s is expected to be a volume or a file share path!  (shadow copy creation is assumed)", arguments[i].c_str());
+                    ft.WriteLine(L"- Parameter %s is expected to be a volume or a file share path!  (shadow copy creation is assumed)", arguments[argIndex].c_str());
                     ft.WriteLine(L"- Example: SHADOWRUN C:");
                     PrintUsage();
                     return 1;
                 }
-
-                // Add the volume to the list
-                volumeList.push_back(GetUniqueVolumeNameForPath(arguments[i], true));
+                else
+                {
+                    // Add the volume to the list
+                    volumeList.push_back(GetUniqueVolumeNameForPath(arguments[argIndex], true));
+                }
             }
-            
+
+#if 0
             // Initialize the VSS client
             m_vssClient.Initialize();
 
             // Create the shadow copy set
             m_vssClient.CreateSnapshotSet(volumeList);
-
+#endif
             try
             {
-                // Generate management scripts if needed
-                if (stringFileName.length() > 0)
-                    m_vssClient.GenerateSetvarScript(stringFileName);
+                // Generate management scripts (optional)
+                if (setvarScript.length() > 0)
+                    m_vssClient.GenerateSetvarScript(setvarScript);
 
-                // Executing the custom command if needed
+                // Set process environment (optional)
+                if (setProcessEnvironment)
+                    m_vssClient.Setvar();
+
+                // Executing the custom command (optional)
                 if (execCommand.length() > 0)
-                    ExecCommand(execCommand);
-
+                    ExecCommand(execCommand, execArguments);
             }
-            catch(HRESULT)
+            catch (HRESULT)
             {
                 throw;
             }
 
             ft.WriteLine(L"\nSnapshot creation done.");
-            
+
             return 0;
         }
 
@@ -285,6 +327,9 @@ void CommandLineParser::PrintUsage()
         L"  -script={file.cmd} - SETVAR script creation\n"
         L"  -exec={command}    - Custom command executed after shadow creation, import or between break and make-it-write\n"
         L"  -tracing           - Runs SHADOWRUN.EXE with enhanced diagnostics\n"
+        L"  -env               - Modify process environment corresponding to SETVAR\n" // Added (not from orginal vshadow)
+        L"  -arg={string}      - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
+        L"  -- {args}...       - Special flag that makes all following arguments being passed directly to the -exec\n" // Added (not from orginal vshadow)
         L"\n" );
 }
 
