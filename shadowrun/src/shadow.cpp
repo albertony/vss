@@ -410,10 +410,10 @@ void CommandLineParser::PrintUsage()
         L"   SHADOWRUN [flags] [volumes]\n"
         L"\n"
         L"List of flags:\n"
-        L"  -?                 - Displays the usage screen\n"
+        L"  -?                 - Displays this usage screen\n"
         L"  -nw                - Create no-writer shadow copies (deprecated option kept only for compatibility with vshadow).\n" // Implied, but kept for backwards compatibility
         L"  -script={file.cmd} - Environment variable configuration script creation\n"
-        L"  -exec={command}    - Custom command executed after shadow creation, import or between break and make-it-write\n"
+        L"  -exec={command}    - Custom command executed after shadow creation\n"
         L"  -wait              - Wait before program termination\n"
         L"  -tracing           - Runs SHADOWRUN.EXE with enhanced diagnostics\n"
         L"  -env               - Set process environment variables\n" // Added (not from orginal vshadow)

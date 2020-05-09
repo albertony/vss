@@ -11,7 +11,7 @@ void VssClient::CreateSnapshotSet(vector<wstring> volumeList)
     // Start the shadow set
     CHECK_COM(m_pVssObject->StartSnapshotSet(&m_latestSnapshotSet.id))
     m_latestSnapshotSet.idString = Guid2WString(m_latestSnapshotSet.id);
-    ft.WriteLine(L"Creating shadow set %s", m_latestSnapshotSet.idString);
+    ft.WriteLine(L"Creating shadow set %s", m_latestSnapshotSet.idString.c_str());
 
     // Add the specified volumes to the shadow set
     AddToSnapshotSet(volumeList);
