@@ -37,7 +37,7 @@ extern "C" int __cdecl wmain(__in int argc, __in_ecount(argc) WCHAR ** argv)
 
         ft.WriteLine(
             L"\n"
-            L"SHADOWRUN.EXE 1.0 - Volume Shadow Copy Runner.\n"
+            L"SHADOWRUN.EXE 0.5 - Volume Shadow Copy Runner.\n"
             L"Copyright (C) 2020 Albertony. All rights reserved.\n"
             );
 
