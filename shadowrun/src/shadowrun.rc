@@ -1,12 +1,18 @@
 #include <windows.h>
 #include <ntverp.h>
 
-#undef  VER_PRODUCTNAME_STR
+#undef VER_COMPANYNAME_STR
+#define VER_COMPANYNAME_STR        "Albertony"
+#undef VER_PRODUCTNAME_STR
 #define VER_PRODUCTNAME_STR         "ShadowRun"
+#undef VER_PRODUCTVERSION
+#define VER_PRODUCTVERSION          0,5,0,0
+#undef VER_PRODUCTVERSION_STR
+#define VER_PRODUCTVERSION_STR      "0.5"
 #define VER_FILETYPE                VFT_APP
 #define VER_FILESUBTYPE             VFT2_UNKNOWN
 #define VER_FILEDESCRIPTION_STR     "ShadowRun, Volume Shadow Copy Runner"
 #define VER_INTERNALNAME_STR        "ShadowRun.exe"
-#define VER_ORIGINALFILENAME_STR    VER_INTERNALNAME_STR
+#define VER_LEGALCOPYRIGHT_STR      "Copyright (c) Albertony. All rights reserved."
 
 #include "common.ver"
