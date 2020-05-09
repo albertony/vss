@@ -306,6 +306,14 @@ is executed. This means that in most cases you don't have to do anything special
 the arguments as you normally would: Surround with double quotes if the value contain spaces,
 else you can skip the quotes.
 
+So you could run some sweet little single-liner like the following. No need to author a
+batch script for `-exec` in advance. No files will be generated, like with `-script`.
+Less "moving parts", usually means less risk of unexpected behaviour!
+
+```
+shadowrun.exe -env -mount -wait -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DRIVE_1%\Files myremote: --dry-run --filter-from %SHADOW_DRIVE_1%\Files\.rclonefilter --exclude-if-present .rcloneignore --checkers 6 --transfers 6 --buffer-size 64M --jottacloud-md5-memory-limit 512M --include /Files/Pictures/**
+```
+
 Not all arguments can be quoted though. For example if you were to run the following
 command it would fail for same reason as when you try to execute "dir" including the
 quotes in a command prompt ('"dir"' is not recognized as an internal or external command)
@@ -374,8 +382,8 @@ Windows Event Log with error messages from VSS regarding COM component not being
 The source code is still based on the original source code from vshadow, it is not a complete
 rewrite, although parts of it have been refactored, and obiously code has been added.
 
-I am have not been very conscious about compiler versions, language features etc. Using C++ standard features only
-avoiding Microsoft specific features are not important as the VSS integration is Windows specific anyway.
+I have have not been very conscious about compiler version, language version etc. Using C++ standard features only,
+avoiding Microsoft specific features, are not considered important since the VSS integration is Windows specific anyway.
 
 I removed build dependency to C++ ATL (Active Template Library), which is the original (vshadow) source code.
 It were used solely for the CComPtr smart pointer class, so I rewrote this to use the Microsoft specific
