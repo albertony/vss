@@ -288,9 +288,8 @@ inline bool IsVolume(wstring volumePath)
 
 
 
-
 // Get the unique volume name for the given path
-inline wstring GetUniqueVolumeNameForPath(wstring path, bool bIsBackup=false)
+inline wstring GetUniqueVolumeNameForPath(wstring path)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -305,7 +304,7 @@ inline wstring GetUniqueVolumeNameForPath(wstring path, bool bIsBackup=false)
     path = AppendBackslash(path);
     if(!IsUNCPath((VSS_PWSZ)path.c_str()))
     {
-        if (bIsBackup && ClusterIsPathOnSharedVolume(path.c_str()))
+        if (ClusterIsPathOnSharedVolume(path.c_str()))
         {
             DWORD cchVolumeRootPath = MAX_PATH;
             DWORD cchVolumeUniqueName = MAX_PATH;
@@ -326,11 +325,11 @@ inline wstring GetUniqueVolumeNameForPath(wstring path, bool bIsBackup=false)
         {
             // Get the root path of the volume
         
-            CHECK_WIN32(GetVolumePathNameW((LPCWSTR)path.c_str(), WString2Buffer(volumeRootPath), (DWORD)volumeRootPath.length()));
+            CHECK_WIN32(GetVolumePathName((LPCWSTR)path.c_str(), WString2Buffer(volumeRootPath), (DWORD)volumeRootPath.length()));
             ft.Trace(DBG_INFO, L"- Path name: %s ...", volumeRootPath.c_str());
 
             // Get the unique volume name
-            CHECK_WIN32(GetVolumeNameForVolumeMountPointW((LPCWSTR)volumeRootPath.c_str(), WString2Buffer(volumeUniqueName), (DWORD)volumeUniqueName.length()));
+            CHECK_WIN32(GetVolumeNameForVolumeMountPoint((LPCWSTR)volumeRootPath.c_str(), WString2Buffer(volumeUniqueName), (DWORD)volumeUniqueName.length()));
             ft.Trace(DBG_INFO, L"- Unique volume name: %s ...", volumeUniqueName.c_str());
         }
     }
@@ -437,71 +436,8 @@ inline wstring GetDisplayNameForVolume(wstring volumeName)
 
 
 
-// Utility function to read the contents of a file
-inline wstring ReadFileContents(wstring fileName)
-{
-    FunctionTracer ft(DBG_INFO);
-
-    ft.WriteLine(L"Reading the file '%s' ...", fileName.c_str());
-
-    HANDLE hFile = CreateFile((LPWSTR)fileName.c_str(),
-                          GENERIC_READ,
-                          FILE_SHARE_READ,
-                          NULL,
-                          OPEN_EXISTING,
-                          0,
-                          NULL);
-
-    if (hFile == INVALID_HANDLE_VALUE)
-        CHECK_WIN32_ERROR(GetLastError(), L"CreateFile");
-
-    // Will automatically call CloseHandle at the end of scope
-    // (even if an exception is thrown)
-    CAutoHandle autoCleanupHandle(hFile);
-
-    // Allocate the read buffer
-    DWORD dwFileSize = GetFileSize(hFile, 0);
-    wstring contents(dwFileSize / sizeof(WCHAR), L'\0');
-
-    // Read the file contents
-    DWORD dwRead;
-    CHECK_WIN32(ReadFile(hFile, WString2Buffer(contents), dwFileSize, &dwRead, NULL));
-
-    return contents;
-}
-
-
-// Utility function to write a new file 
-inline void WriteFile(wstring fileName, wstring contents)
-{
-    FunctionTracer ft(DBG_INFO);
-
-    ft.WriteLine(L"Writing the file '%s' ...", fileName.c_str());
-
-    HANDLE hFile = CreateFile((LPWSTR)fileName.c_str(),
-                          GENERIC_WRITE,
-                          FILE_SHARE_READ|FILE_SHARE_WRITE,
-                          NULL,
-                          CREATE_ALWAYS,
-                          0,
-                          NULL);
-
-    if (hFile == INVALID_HANDLE_VALUE)
-        CHECK_WIN32_ERROR(GetLastError(), L"CreateFile");
-
-    // Will automatically call CloseHandle at the end of scope
-    // (even if an exception is thrown)
-    CAutoHandle autoCleanupHandle(hFile);
-
-    // Write the file contents
-    DWORD dwWritten;
-    DWORD cbWrite = (DWORD)((contents.length() + 1) * sizeof(WCHAR));
-    CHECK_WIN32(WriteFile(hFile, (LPWSTR)contents.c_str(), cbWrite, &dwWritten, NULL));
-}
-
-
 // Execute a command
-inline void ExecCommand(wstring command, vector<wstring> arguments)
+inline DWORD ExecCommand(wstring command, vector<wstring> arguments)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -512,7 +448,7 @@ inline void ExecCommand(wstring command, vector<wstring> arguments)
     si.cb = sizeof(si);
     ZeroMemory( &pi, sizeof(pi) );
 
-    ft.WriteLine(L"- Executing command '%s' ...", command.c_str());
+    ft.WriteLine(L"Executing command '%s' ...", command.c_str());
     ft.WriteLine(L"-----------------------------------------------------");
 
     //
@@ -569,10 +505,45 @@ inline void ExecCommand(wstring command, vector<wstring> arguments)
     // Checking the exit code
     DWORD dwExitCode = 0;
     CHECK_WIN32( GetExitCodeProcess( pi.hProcess, &dwExitCode ) );
-    if (dwExitCode != 0)
+    ft.WriteLine(L"Command returned with exit code: %d", dwExitCode);
+    return dwExitCode;
+}
+
+inline wchar_t GetNextAvailableDriveLetter()
+{
+    FunctionTracer ft(DBG_INFO);
+    auto driveMask = GetLogicalDrives();
+    if (!driveMask) CHECK_WIN32_ERROR(GetLastError(), L"GetLogicalDrives");
+    wchar_t driveLetter = L'A';
+    for (size_t i = 0, n = 8 * sizeof(driveMask);
+        i < n && driveMask & (1 << i);
+        ++i, ++driveLetter);
+    if (driveLetter < L'A' || driveLetter > L'Z')
     {
-        ft.WriteLine(L"ERROR: Command line '%s' failed!. Aborting the backup...", command.c_str());
-        ft.WriteLine(L"- Returned error code: %d", dwExitCode);
+        ft.WriteLine(L"ERROR: Invalid mount drive letter!");
         throw(E_UNEXPECTED);
     }
+    return driveLetter;
 }
+
+inline wchar_t VerifyAvailableDriveLetter(wchar_t driveLetter)
+{
+    FunctionTracer ft(DBG_INFO);
+    if (driveLetter < L'A' || driveLetter > L'Z')
+    {
+        ft.WriteLine(L"ERROR: Invalid mount drive letter!");
+        throw(E_UNEXPECTED);
+    }
+    auto driveMask = GetLogicalDrives();
+    if (!driveMask)
+    {
+        CHECK_WIN32_ERROR(GetLastError(), L"GetLogicalDrives");
+    }
+    if (driveMask & (1 << (driveLetter - L'A')))
+    {
+        ft.WriteLine(L"ERROR: Mount drive letter '%c' is already in use!");
+        throw(E_UNEXPECTED);
+    }
+    return driveLetter;
+}
+

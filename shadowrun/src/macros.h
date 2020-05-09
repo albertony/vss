@@ -137,7 +137,6 @@ const int MAX_VPRINTF_BUFFER_SIZE = 4096;
         CHECK_WIN32_ERROR(GetLastError(), #Call);                                           \
 }
 
-
 #define CHECK_WIN32_ERROR( ErrorCode, Text )                                                \
 {                                                                                           \
     ft.Trace(DBG_INFO, L"Executing Win32 call '%s'", GEN_WSTRINGIZE(Text));             \

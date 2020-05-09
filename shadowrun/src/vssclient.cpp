@@ -7,13 +7,16 @@
 VssClient::VssClient()
 {
     m_bCoInitializeCalled = false;
-    m_latestSnapshotSetID = GUID_NULL;
 }
 
 
 // Destructor
 VssClient::~VssClient()
 {
+
+    // Try to unmount any still mounted snapshots
+    UnmountSnapshotsSilent();
+
     // Release the IVssBackupComponents interface 
     // WARNING: this must be done BEFORE calling CoUninitialize()
     m_pVssObject = NULL;
@@ -88,8 +91,3 @@ void VssClient::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
         throw(hrReturned);
     }
 }
-
-
-
-
-
