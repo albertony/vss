@@ -42,7 +42,7 @@ and more robust.
 
 
 ***
-## Using vshadow
+## Using VShadow
 
 The vshadow utility from Microsoft can be used to integrate external utilities like rclone
 with VSS. It is not an entirely straight forward proces, nor a very elegant solution, but
@@ -274,7 +274,7 @@ before everything is automatically cleaned up.
 #### Setting process environment variables
 
 Support for setting environment variables directly into the process instead of having
-to go via generated batch file, given by the `-script` option, containing `SET` statements.
+to go via generated batch file containing `SET` statements, given by the `-script` option.
 
 #### Automatically mounting
 
@@ -290,12 +290,45 @@ run.
 
 #### Arguments to the executed command
 
-Exec command can now be specified with command line arguments. The main executable must be specified
-with the `-exec` option as before, but command arguments can now be specified with `arg=value`,
+Command line arguments to the exec command can be specified. The main executable must be specified
+with the `-exec` option as before, but any command arguments can now be specified with `arg=value`,
 which can be repated. If number of arguments is large then this quickly makes the command line quite
 daunting, so an alternative method is to specify all arguments to shadowrun, then add a special `--`
 limiter, and then specify arguments that will be passed directly to the command as you would write them
 when executing it directly.
+
+##### Quoting
+
+The default behavior is to ensure all arguments are surrounded by double quotes when the command
+is executed. This means that in most cases you don't have to do anything special, just specify
+the arguments as you normally would: Surround with double quotes if the value contain spaces,
+else you can skip the quotes.
+
+Not all arguments can be quoted though. For example if you were to run the following
+command it would fail for same reason as when you try to execute "dir" including the
+quotes in a command prompt ('"dir"' is not recognized as an internal or external command)
+
+```
+shadowrun.exe -env -mount -wait -exec=C:\Windows\System32\cmd.exe C: -- /C DIR %SHADOW_DRIVE_1%
+```
+
+To solve this there is an option `-nq` ("no quoting") which disables the forced quoting.
+This means, though, that it is a bit more cumbersome to specify values with space,
+which actually needs quoting: You have to surround them with triple quotes! The reason
+is that you need one pair of quotes for the value to appear as one entry from your
+shell and into the ShadowRun application. But when the application reads the value it
+will "consume" the quotes, so when sending the value along to the exec command then it
+would no be quoted. Therefore you need an additional pair of quotes for the exec command.
+But now you get the problem of quotes inside quotes, so you need some kind of escaping.
+Adding an extra quote is the best way to do this, so this means you need triple quoting
+```
+-arg="""c:\program files"""
+```
+
+Note that the `-nq` option will only have effect for following arguments. So you can
+specify some `-arg` entries first, then `-nq`, and then some more `-arg` which will
+have the "no quoting" behaviour. Since you cannot specify any program options after
+the `--`, all arguments given here will be affected by a `nq` option.
 
 #### Pass-through exit code
 

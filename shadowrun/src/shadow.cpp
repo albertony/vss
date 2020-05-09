@@ -116,6 +116,9 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
     // Additional arguments to the execCommand
     vector<wstring> execArguments;
 
+    // Force quotes around arguments specified with -arg or after -- with quotes
+    bool addExecArgumentQuotes = true;
+
     // Argument handling mode where all remaining arguments are just passed into execArguments.
     bool passThrough = false;
 
@@ -132,14 +135,14 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             //
 
             // Check for the script generation option
-            if (MatchArgument(arguments[argIndex], L"script", environmentScript))
+            if (MatchArgument(arguments[argIndex], L"script", environmentScript, true))
             {
                 ft.WriteLine(L"(Option: Environment variable configuration script creation '%s')", environmentScript.c_str());
                 continue;
             }
 
             // Check for the command execution option
-            if (MatchArgument(arguments[argIndex], L"exec", execCommand))
+            if (MatchArgument(arguments[argIndex], L"exec", execCommand, true)) // Note: Dequote because quotes are always added on execution due to security reasons
             {
                 ft.WriteLine(L"(Option: Execute binary/script after shadow creation '%s')", execCommand.c_str());
 
@@ -148,7 +151,7 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
                 if ((dwAttributes == INVALID_FILE_ATTRIBUTES) || ((dwAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0))
                 {
                     ft.WriteLine(L"ERROR: The parameter '%s' must be an existing file!", execCommand.c_str());
-                    ft.WriteLine(L"- Note: The -exec command cannot have parameters!");
+                    ft.WriteLine(L"- Note: For parameters use '-arg' or '--' options");
                     throw(E_INVALIDARG);
                 }
                 continue;
@@ -172,7 +175,7 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
 
             // Check for the tracing option
             wstring value;
-            if (MatchArgument(arguments[argIndex], L"errorcode", value))
+            if (MatchArgument(arguments[argIndex], L"errorcode", value, true))
             {
                 errorCodeStart = _wtoi(value.c_str());
                 if (errno == ERANGE || errorCodeStart == 0)
@@ -201,18 +204,32 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             }
 
             // Check for the drive option
-            if (MatchArgument(arguments[argIndex], L"drive", mountDriveLetters))
+            if (MatchArgument(arguments[argIndex], L"drive", mountDriveLetters, true))
             {
                 ft.WriteLine(L"(Option: Mount shadow copies as temporary drives '%s')", mountDriveLetters.c_str());
                 mountSnapshots = true; // Implied
                 continue;
             }
 
-            // Check for the script generation option
-            if (MatchArgument(arguments[argIndex], L"arg", value))
+            // Check for the exec arguments option
+            // Note: Will by default remove optional surrounding double quotes and then forcefully
+            // add then when executing the command. This can be reversed by the -nq option: Then
+            // any quoting are kept as is, so that only the arguments actually specified with quotes
+            // will be quoted when executing the command, but must then quote only the value
+            // not "-arg=value", but -arg="value").
+            if (MatchArgument(arguments[argIndex], L"arg", value, addExecArgumentQuotes))
             {
                 execArguments.push_back(value);
                 ft.WriteLine(L"(Option: Including additional argument when executing binary/script '%s')", value.c_str());
+                continue;
+            }
+
+            // Do not force quotes around arguments specified with -arg or after --, when executing the command.
+            // Note: For -arg this only has affect for the ones not already specified!
+            if (MatchArgument(arguments[argIndex], L"nq"))
+            {
+                ft.WriteLine(L"(Option: Do not force quotes around arguments specified with -arg or after -- with quotes)");
+                addExecArgumentQuotes = false; // Variable logic reversed, so setting quoting=false
                 continue;
             }
 
@@ -288,7 +305,7 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
 
                 // Executing the custom command (optional)
                 if (execCommand.length() > 0)
-                    exitCode = ExecCommand(execCommand, execArguments);
+                    exitCode = ExecCommand(execCommand, execArguments, addExecArgumentQuotes);
 
                 if (waitBeforeCleanup)
                 {
@@ -356,15 +373,15 @@ bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern)
 // Returns TRUE if the argument is in the following formats
 //  -xxxx=yyyy
 //  /xxxx=yyyy
-// where xxxx is the option pattern and yyyy the additional parameter (eventually enclosed in ' or ")
-bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern, wstring& additionalParameter)
+// where xxxx is the option pattern and yyyy the additional parameter (optionally enclosed double quotes)
+bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern, wstring& additionalParameter, bool dequote)
 {
     FunctionTracer ft(DBG_INFO);
-    
+
     ft.Trace(DBG_INFO, L"Matching Arg: '%s' with '%s'", argument.c_str(), optionPattern.c_str());
 
     _ASSERTE(argument.length() > 0);
-    
+
     if ((argument[0] != L'/') && (argument[0] != L'-'))
         return false;
 
@@ -374,7 +391,7 @@ bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern, w
         return false;
 
     ft.Trace(DBG_INFO, L"%s %d", argument.substr(1, equalSignPos - 1).c_str(), equalSignPos);
-    
+
     // Check to see if this is our option
     if (!IsEqual(argument.substr(1, equalSignPos - 1), optionPattern))
         return false;
@@ -388,11 +405,13 @@ bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern, w
     if (additionalParameter.length() == 0)
         return false;
 
-    // Eliminate the enclosing quotes, if any
-    size_t lastPos = additionalParameter.length() - 1;
-    if ((additionalParameter[0] == L'"') && (additionalParameter[lastPos] == L'"'))
-        additionalParameter = additionalParameter.substr(1, additionalParameter.length() - 2);
-    
+    if (dequote)
+    {
+        // Eliminate the enclosing quotes, if any
+        size_t lastPos = additionalParameter.length() - 1;
+        if ((additionalParameter[0] == L'"') && (additionalParameter[lastPos] == L'"'))
+            additionalParameter = additionalParameter.substr(1, additionalParameter.length() - 2);
+    }
     ft.Trace(DBG_INFO, L"Return true; (additional param = %s)", additionalParameter.c_str());
     
     return true;
@@ -411,7 +430,7 @@ void CommandLineParser::PrintUsage()
         L"\n"
         L"List of flags:\n"
         L"  -?                 - Displays this usage screen\n"
-        L"  -nw                - Create no-writer shadow copies (deprecated option kept only for compatibility with vshadow).\n" // Implied, but kept for backwards compatibility
+        L"  -nw                - Create no-writer shadow copies (implied and deprecated, only for vshadow syntax compat).\n" // Implied, but kept for backwards compatibility
         L"  -script={file.cmd} - Environment variable configuration script creation\n"
         L"  -exec={command}    - Custom command executed after shadow creation\n"
         L"  -wait              - Wait before program termination\n"
@@ -419,8 +438,9 @@ void CommandLineParser::PrintUsage()
         L"  -env               - Set process environment variables\n" // Added (not from orginal vshadow)
         L"  -mount             - Mount shadow copies as temporary drives\n" // Added (not from orginal vshadow)
         L"  -drive={ABC}       - Specific drive letters to use for mounting\n" // Added (not from orginal vshadow)
-        L"  -arg={string}      - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
         L"  -errorcode=1       - First exit code value to use for internal errors, not from the command\n" // Added (not from orginal vshadow)
+        L"  -nq                - Do not force quotes around arguments specified with -arg or after -- with quotes\n" // Added (not from orginal vshadow)
+        L"  -arg={string}      - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
         L"  -- {args}...       - Special flag that makes all following arguments being passed directly to the -exec\n" // Added (not from orginal vshadow)
         L"\n" );
 }

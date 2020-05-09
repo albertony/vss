@@ -437,7 +437,7 @@ inline wstring GetDisplayNameForVolume(wstring volumeName)
 
 
 // Execute a command
-inline DWORD ExecCommand(wstring command, vector<wstring> arguments)
+inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteArguments)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -447,9 +447,6 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments)
     ZeroMemory( &si, sizeof(si) );
     si.cb = sizeof(si);
     ZeroMemory( &pi, sizeof(pi) );
-
-    ft.WriteLine(L"Executing command '%s' ...", command.c_str());
-    ft.WriteLine(L"-----------------------------------------------------");
 
     //
     // Security Remarks - CreateProcess
@@ -473,9 +470,29 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments)
 
     // Prepend/append the command with double-quotes. This will prevent adding parameters
     command = wstring(L"\"") + command + wstring(L"\"");
-    for (size_t i = 0; i < arguments.size(); ++i) {
-        command += wstring(L" \"") + arguments[i] + wstring(L"\"");
+    for (size_t i = 0; i < arguments.size(); ++i)
+    {
+        if (quoteArguments)
+        {
+            // Automatically add double quotes around the argument, in case it contains spaces etc.
+            // This will not always work, e.g. command "cmd" with arguments "/c", "dir" and "c:\program files"
+            // will fail ('"dir"' is not recognized as an internal or external command..).
+            command += wstring(L" \"") + arguments[i] + wstring(L"\"");
+        }
+        else
+        {
+            // Add arguments directly. If an argument contain space this means it must be
+            // already quoted. When such arguments are supplied into this application it
+            // means they must be triple quoted """arg""" (because shadowrun consumes
+            // the outer pair of quotes and the inner quotes must be escaped in the shell
+            // by doubling them). It will then work with command "cmd" and arguments
+            // "/c", "dir" """c:\program files""".
+            command += wstring(L" ") + arguments[i];
+        }
     }
+
+    ft.WriteLine(L"Executing command: %s", command.c_str());
+    ft.WriteLine(L"-----------------------------------------------------");
 
     // Note: By not setting module name but sending command as first string of the
     // command line it can be name of a batch script and it will be executed directly,

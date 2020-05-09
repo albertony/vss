@@ -206,7 +206,7 @@ void VssClient::SetProcessEnvironment()
         stringBuilder << L"SHADOW_DEVICE_" << i+1;
         CHECK_WIN32(SetEnvironmentVariable(stringBuilder.str().c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str()));
         stringBuilder.str(std::wstring{});
-        stringBuilder << L"SHADOW_MOUNT_" << i+1;
+        stringBuilder << L"SHADOW_DRIVE_" << i+1;
         if (m_latestSnapshotSet.snapshots[i].mount.empty())
         {
             CHECK_WIN32(SetEnvironmentVariable(stringBuilder.str().c_str(), NULL)); // Remove any existing

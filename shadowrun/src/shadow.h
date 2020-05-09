@@ -55,8 +55,8 @@ private:
     // Returns TRUE if the argument is in the following formats
     //  -xxxx=yyyy
     //  /xxxx=yyyy
-    // where xxxx is the option pattern and yyyy the additional parameter (eventually enclosed in ' or ")
-    bool MatchArgument(wstring argument, wstring optionPattern, wstring & additionalParameter);
+    // where xxxx is the option pattern and yyyy the additional parameter (optionally enclosed double quotes)
+    bool MatchArgument(wstring argument, wstring optionPattern, wstring & additionalParameter, bool dequote);
 
 
     //
