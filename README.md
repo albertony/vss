@@ -2,6 +2,10 @@
 
 This is my repository for VSS related utilities.
 
+For details of the individual utilities, see individual readme files in the respective folders:
+* Vshadow (the untouched original repository): [/vshadow](https://github.com/albertony/vss/tree/master/vshadow).
+* Shadowrun (my own utility based on vshadow): [/shadowrun](https://github.com/albertony/vss/tree/master/shadowrun).
+
 ## Volume Shadow Copy Service (VSS) background information
 
 ### Motivation
@@ -166,6 +170,8 @@ Contains the original source code of the `Volume Shadow Copy sample client` from
 Windows 8 version: https://github.com/microsoft/Windows-classic-samples/tree/master/Samples/VShadowVolumeShadowCopy.
 
 This source requires ATL, a dependency removed from my own utilities based on the same source.
+
+See separate readme (the one from the original repository) in [/vshadow](https://github.com/albertony/vss/tree/master/vshadow).
 
 #### Building
 
