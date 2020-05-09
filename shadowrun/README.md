@@ -7,6 +7,10 @@ utility that can work on this, before everything is automatically cleaned up.
 See root of repository [vss](..) for background information about Volume Shadow Copy Service (also known
 as Volume Snapshot Service, VSS for short).
 
+Following is some write-up on motivation, and the process of trying to get VShadow to work satisfactorily.
+
+**If are familiar with, or don't care about, the background story, jump right to the description of features: [Introducing ShadowRun](https://github.com/albertony/vss/tree/master/shadowrun#introducing-shadowrun).**
+
 ***
 ## Motivation
 
@@ -277,6 +281,9 @@ before everything is automatically cleaned up.
 
 Support for setting environment variables directly into the process instead of having
 to go via generated batch file containing `SET` statements, given by the `-script` option.
+This makes it easier to execute other applications directly using the `-exec` option,
+instead of always having to go via a batch script (or parse the file content) to be
+able to find the snapshot information.
 
 #### Automatically mounting
 
@@ -284,11 +291,23 @@ Support for automatically mounting the created shadow copies so that they are ac
 from a drive letter. The drive letters used are set in new environment variables SHADOW_DRIVE_n.
 You can also specify which drive letters you want to use, default is to use whichever is available.
 
+The snapshots are mounted as named device object, so-called
+[MS-DOS device](https://docs.microsoft.com/en-us/windows-hardware/drivers/kernel/introduction-to-ms-dos-device-names),
+which essentially is a user mode symbolic link in Windows' Object Manager component,
+to the device object representing the snapshot. What it means, is that most applications
+will get to the snapshot device through a regular drive letter, and be able to access it
+like a regular hard drive. The built-in command line utility `subst` does the same thing.
+These symbolic links (drive letters) will not be visible to other users. They are only valid
+for the current session, so will be gone after a restart if not explicitely deleted before that.
+This is a good match for the use in this application, where the device we are mounting is
+only existing while the application is running, and only intended to be used by this application.
+
 #### Additional environment variables
 
-In addition to SHADOW_DRIVE_n, there is also a new variable SHADOW_SET_COUNT that can be used 
-to avoid reading SHADOW_..._n variables that for some reason exists with numbers not valid for the current
-run.
+In addition to SHADOW_DRIVE_n mentioned above, there is also a new variable SHADOW_SET_COUNT that
+can be used to easily loop on the other SHADOW variables, while avoiding reading any variables
+that for some reason was inherited from the parent environment, for index numbers not part of
+the current run.
 
 #### Arguments to the executed command
 
@@ -342,32 +361,54 @@ the `--`, all arguments given here will be affected by a `nq` option.
 
 #### Pass-through exit code
 
-You will now get the exit code from the executed command (`-exec`), so that
-you can handle that as you would when running it directly. If shadowrun fails then it will set
-exit codes also, but to be able to distinct between them you can set option `-errorcode` to an integer
-offset for exit codes that shadowrun should return.
+
+Vshadow returns the following [exit codes](https://github.com/microsoft/Windows-classic-samples/blob/master/Samples/VShadowVolumeShadowCopy/cpp/shadow.cpp#L28-L34):
+
+* 0 - Success
+* 1 - Object not found
+* 2 - Runtime Error 
+* 3 - Memory allocation error
+
+It does check the exit code of the executed command (`-exec`), but if it is nonzero
+then vshadow will always just treat it as an error and return its own exit code (value 2).
+This means you will not get the exit code of the command back (without parsing the message output),
+and if the executed command uses non-zero exit codes for non-error situations this will not
+be considered.
+
+ShadowRun will return the exit code from the executed command (`-exec`), so that
+you can handle the exit code from shadowrun as you would when running the command directly.
+If shadowrun itself fails for some reason, then it will still set its own exit code, so
+if there is overlap with the exit codes used by your command you will not be able to tell
+from the exit code which of them it came from. To solve this there is a new option,
+`-errorcode`, which can be set to an integer value which will be used as an offset for
+exit code values that shadowrun should return. So if you set `-errorcode=1000` then
+you will get exit code 1000 instead of 1, 1001 instead of 2 and 1002 instead of 3.
+Then you can assume that, if exit code is non-zero then below 1000 it comes from the
+executed command, else it comes from vshadow.
 
 #### Improved wait option
 
-Wait option from the original vshadow is kept, but with different functionality: Here it waits after
-the snapshot(s) have been created, and after any exec commands have been executed, but before starting
-to cleanup. This means you are able to interact with the temporary shadow copies on the side (similar to
-the trick I described earlier by letting vshadow execute Notepad). The snapshots are "mounted" as
-named device object, so-called MS-DOS device, similar to what the you can do with the command line
-utility `subst`. They will not be visible to other users, and not every application will see them either,
-but from `Command Prompt` you should be able to `cd` into it, show it with `subst` etc.
+Wait option from the original vshadow is kept in shadowrun, but with different functionality:
+Here it waits after the snapshot(s) have been created, and after any exec commands have
+been executed, but before starting to cleanup. This means you are able to interact with
+the temporary shadow copies on the side (similar to the trick I described earlier by
+letting vshadow execute Notepad).
+
 
 ### Other changes
 
 #### Backwards compatibility with vshadow syntax
 
-The `-nw` ("no-writer") option from the original vshadow source is implicit, but included for compatibility.
+The `-nw` ("no-writer") option from the original vshadow source is implicit, but kept
+for compatibility so that you will be able to run shadowrun with the same arguments
+as vshadow for the specific functionality that shadowrun has focused on.
 
 #### Improved output
 
-The output messages printed from vshadow is a bit misleading when used in this situation, since it is not
-the snapshot creation itself that is our main focus of attention but the executed command and the snapshot
-is more or less something that should just be done silently in the background. For this reason I have started
+The output messages printed from vshadow is a bit misleading when used for the purpose
+described here, since it is not the snapshot creation itself that is our main focus of
+attention but the executed command and the snapshot is more or less something that
+should just be done silently in the background. For this reason I have started
 changing the message strings printed so that it does not talk so much about "backup" etc.
 
 #### Build configuration
@@ -380,11 +421,17 @@ Windows Event Log with error messages from VSS regarding COM component not being
 ### Source code
 
 The source code is still based on the original source code from vshadow, it is not a complete
-rewrite, although parts of it have been refactored, and obiously code has been added.
+rewrite, although smaller parts of it have been refactored, and of course lots of it removed,
+and some code added for the new features. This is something I might reconsider, but
+for now the risk of introducing more errors then I fix is too big. After all, vshadow has
+been in use for a long time, and if the source code from the open source repository is more or
+less the same as is used to build the exe included in Windows SDK then it has probably been
+trough some tough tests over the years.
 
-I have have not been very conscious about compiler version, language version etc. Using C++ standard features only,
-avoiding Microsoft specific features, are not considered important since the VSS integration is Windows specific anyway.
+I have have not been very conscious about compiler version, language version etc.
+Using C++ standard features only, avoiding Microsoft specific features, are not considered
+important since the VSS integration is Windows specific anyway.
 
-I removed build dependency to C++ ATL (Active Template Library), which is the original (vshadow) source code.
-It were used solely for the CComPtr smart pointer class, so I rewrote this to use the Microsoft specific
-_com_ptr_t class instead, which is very similar.
+I removed build dependency to C++ ATL (Active Template Library), which is the
+original (vshadow) source code. It were used solely for the CComPtr smart pointer class,
+so I rewrote this to use the Microsoft specific _com_ptr_t class instead, which is very similar.
