@@ -35,7 +35,6 @@ Because then:
 - The files (in the snapshot) will never be modified during the upload.
 - The files (in the snapshot) are never locked by other programs.
 
-
 Following [below](#using-vshadow) is a description of how you can use the original vshadow utility
 to achive this. Further down this site I [introduce](#introducing-shadowrun) my own ShadowRun
 application where I have added improvements that makes the solution easier, more flexible, and
@@ -309,10 +308,11 @@ offset for exit codes that shadowrun should return.
 
 Wait option from the original vshadow is kept, but with different functionality: Here it waits after
 the snapshot(s) have been created, and after any exec commands have been executed, but before starting
-to cleanup. This means you are able to interact with the temporary shadow copies on the side!
-The snapshots are "mounted" as named device object, so-called MS-DOS device, similar to what the you can
-do with the command line utility `subst`. They will not be visible to other users, and not every application
-will see them either, but from `Command Prompt` you should be able to `cd` into it, show it with `subst` etc.
+to cleanup. This means you are able to interact with the temporary shadow copies on the side (similar to
+the trick I described earlier by letting vshadow execute Notepad). The snapshots are "mounted" as
+named device object, so-called MS-DOS device, similar to what the you can do with the command line
+utility `subst`. They will not be visible to other users, and not every application will see them either,
+but from `Command Prompt` you should be able to `cd` into it, show it with `subst` etc.
 
 ### Other changes
 
@@ -329,10 +329,19 @@ changing the message strings printed so that it does not talk so much about "bac
 
 #### Build configuration
 
-Removed build dependency to ATL.
-
+On 64-bit versions of Windows (x64), the VSS framework COM libraries are 64-bit, so the application must
+also be. The original vshadow repository contains Visual Studio project, but only with 32-bit (Win32)
+build configuration. Attempting to run a 32-bit build will fail mysteriously, but with hints in
+Windows Event Log with error messages from VSS regarding COM component not being registered or similar.
 
 ### Source code
 
 The source code is still based on the original source code from vshadow, it is not a complete
 rewrite, although parts of it have been refactored, and obiously code has been added.
+
+I am have not been very conscious about compiler versions, language features etc. Using C++ standard features only
+avoiding Microsoft specific features are not important as the VSS integration is Windows specific anyway.
+
+I removed build dependency to C++ ATL (Active Template Library), which is the original (vshadow) source code.
+It were used solely for the CComPtr smart pointer class, so I rewrote this to use the Microsoft specific
+_com_ptr_t class instead, which is very similar.

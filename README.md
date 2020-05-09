@@ -69,12 +69,12 @@ Resize ShadowStorage  - Resize a volume shadow copy storage association
 
 #### Vshadow
 
-VShadow is a more advanced command-line tool that you can use to also create and manage may aspects of volume shadow copies.
+VShadow is a more advanced command-line tool that you can use to also create and manage many aspects of volume shadow copies.
 It is not included in Windows, but in Windows SDK which you would normally install as part of Visual Studio, but can
 also download and install from [Microsoft Developer Downloads](https://developer.microsoft.com/en-us/windows/downloads/).
 
 It is actually intended as a sample for demonstrating the use of the [Volume Shadow Copy Service](https://docs.microsoft.com/en-gb/windows/win32/vss/volume-shadow-copy-service-portal) (VSS) COM API.
-It even bears the name "Volume Shadow Copy **sample client**", still, but even so it is highly usable
+It even bears the name "Volume Shadow Copy **sample client**", still, but even so it is highly usable.
 
 For more information about the VShadow tool and its command-line options,
 see [VShadow Tool and Sample](https://docs.microsoft.com/en-gb/windows/win32/vss/vshadow-tool-and-sample)
