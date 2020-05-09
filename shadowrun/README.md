@@ -66,9 +66,11 @@ specifies a batch script you it can include a `CALL` statement referencing the g
 named according to `-script`. Now evaluating environment variable `%SHADOW_DEVICE_1%` in your
 `-exec` script will return the device name of the temporary snapshot! So then we are close, but
 the last challenge is how to actually access the shadow device. Regular file commands and programs
-cannot access it by the device name directly! Luckily the built-in `MKLINK` utility are able
-to create a directory symbolic link with the snapshot device as target, and then you can "mount"
-it to a regular directory path on your C: drive.
+cannot access it by the device name directly! Some do actually: COPY can be used to copy
+a file directly using `copy %VSHADOW_DEVICE_1%\somefile.txt c:\somefile_bak.txt`, but DIR
+does not work etc so you will probably not get to do what you want. Luckily the built-in `MKLINK`
+utility are able to create a directory symbolic link with the snapshot device as target, and then
+you can "mount" it to a regular directory path on your C: drive.
 
 One trick to test this out interactively is to specify a "blocking" command in the `-exec`
 argument. For example, if you specify `-exec=C:\Windows\System32\notepad.exe` then after
