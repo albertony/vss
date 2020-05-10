@@ -330,6 +330,8 @@ This makes it easier to execute other applications directly using the `-exec` op
 instead of always having to go via a batch script (or parse the file content) to be
 able to find the snapshot information.
 
+Added option: `-env`
+
 #### Automatically mounting
 
 Support for automatically mounting the created shadow copies so that they are accessible
@@ -347,6 +349,8 @@ for the current session, so will be gone after a restart if not explicitely dele
 This is a good match for the use in this application, where the device we are mounting is
 only existing while the application is running, and only intended to be used by this application.
 
+Added option: `-mount`
+
 #### Additional environment variables
 
 In addition to SHADOW_DRIVE_n mentioned above, there is also a new variable SHADOW_SET_COUNT that
@@ -362,6 +366,8 @@ which can be repated. If number of arguments is large then this quickly makes th
 daunting, so an alternative method is to specify all arguments to shadowrun, then add a special `--`
 limiter, and then specify arguments that will be passed directly to the command as you would write them
 when executing it directly.
+
+Added options: `-arg` and `--`
 
 ##### Quoting
 
@@ -406,7 +412,6 @@ the `--`, all arguments given here will be affected by a `nq` option.
 
 #### Pass-through exit code
 
-
 Vshadow returns the following [exit codes](https://github.com/microsoft/Windows-classic-samples/blob/master/Samples/VShadowVolumeShadowCopy/cpp/shadow.cpp#L28-L34):
 
 * 0 - Success
@@ -431,6 +436,8 @@ you will get exit code 1000 instead of 1, 1001 instead of 2 and 1002 instead of 
 Then you can assume that, if exit code is non-zero then below 1000 it comes from the
 executed command, else it comes from vshadow.
 
+Added option: `-errorcode`
+
 #### Improved wait option
 
 Wait option from the original vshadow is kept in shadowrun, but with different functionality:
@@ -439,6 +446,7 @@ been executed, but before starting to cleanup. This means you are able to intera
 the temporary shadow copies on the side (similar to the trick I described earlier by
 letting vshadow execute Notepad).
 
+Added option: `-wait`
 
 ### Other changes
 
@@ -483,7 +491,7 @@ so I rewrote this to use the Microsoft specific _com_ptr_t class instead, which 
 
 ## Using ShadowRun with Rclone
 
-Picking up on the case of [using VShadow with Rclone](#using-vshadow-with-rRclone), where we wanted
+Picking up on the case of [using VShadow with Rclone](#using-vshadow-with-rclone), where we wanted
 to sync a directory `C:\Data\` to the cloud, and by use of rclone one would normally execute
 
 ```
@@ -496,5 +504,9 @@ original `vshadow` utility, we can be able to do this very easy with `shadowrun`
 ```
 shadowrun.exe -env -mount -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DRIVE_1%\Data\ remote:Data
 ```
+
+We are using the added features for [setting process environment variables](#setting-process-environment-variables),
+[automatically mounting](automatically-mounting) and [arguments to the executed command](#arguments-to-the-executed-command).
+We can also check the exit code, which will be the one from rclone, due to the added feature [pass-through exit code](#pass-through-exit-code).
 
 See description of the [quoting feature](#quoting) for description of possible quoting issues, and a more complex example.
