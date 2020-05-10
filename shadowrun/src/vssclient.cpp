@@ -87,7 +87,7 @@ void VssClient::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
         ft.WriteLine(L"Error during the last asynchronous operation.");
         ft.WriteLine(L"- Returned HRESULT = 0x%08lx", hrReturned);
         ft.WriteLine(L"- Error text: %s", FunctionTracer::HResult2String(hrReturned).c_str());
-        ft.WriteLine(L"- Please re-run SHADOWRUN.EXE with the /tracing option to get more details");
+        ft.WriteLine(L"- Please re-run ShadowRun.exe with the /tracing option to get more details");
         throw(hrReturned);
     }
 }

@@ -99,7 +99,7 @@ const int MAX_VPRINTF_BUFFER_SIZE = 4096;
 //  - The macro will execute the call given in its parameter
 //  - The macro will examine the returned HRESULT
 //  - If an failed HRESULT is returned, an explanatory text is written to the console 
-//  and an error is thrown. SHADOWRUN.EXE will then terminate
+//  and an error is thrown. ShadowRun.exe will then terminate
 //
 //  Example 
 //  - API: HRESULT CoCreateInstance()
@@ -117,7 +117,7 @@ const int MAX_VPRINTF_BUFFER_SIZE = 4096;
         ft.WriteLine(L"\nERROR: COM call %s failed.", GEN_WSTRINGIZE(Text));                \
         ft.WriteLine(L"- Returned HRESULT = 0x%08lx", hrInternal);                          \
         ft.WriteLine(L"- Error text: %s", FunctionTracer::HResult2String(hrInternal).c_str());      \
-        ft.WriteLine(L"- Please re-run SHADOWRUN.EXE with the /tracing option to get more details");\
+        ft.WriteLine(L"- Please re-run ShadowRun.exe with the /tracing option to get more details");\
         throw(hrInternal);                                                                  \
     }                                                                                       \
 }
@@ -128,7 +128,7 @@ const int MAX_VPRINTF_BUFFER_SIZE = 4096;
 //  - The macro will execute the call given in its parameter
 //  - The macro will examine the returned BOOL (we assume that the API returns a BOOL. 
 //  - If FALSE is returned, an explanatory text is written to the console 
-//  and an error is thrown. SHADOWRUN.EXE will then terminate.
+//  and an error is thrown. ShadowRun.exe will then terminate.
 //
 #define CHECK_WIN32( Call )                                                                 \
 {                                                                                           \
@@ -147,7 +147,7 @@ const int MAX_VPRINTF_BUFFER_SIZE = 4096;
         ft.WriteLine(L"\nERROR: Win32 call %s failed.", GEN_WSTRINGIZE(Text));          \
         ft.WriteLine(L"- GetLastError() == %ld", dwLastError);                              \
         ft.WriteLine(L"- Error text: %s", FunctionTracer::HResult2String(hrInternal).c_str());      \
-        ft.WriteLine(L"- Please re-run SHADOWRUN.EXE with the /tracing option to get more details");\
+        ft.WriteLine(L"- Please re-run ShadowRun.exe with the /tracing option to get more details");\
         throw(hrInternal);                                                                  \
     }                                                                                       \
 }

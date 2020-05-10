@@ -31,13 +31,13 @@ extern "C" int __cdecl wmain(__in int argc, __in_ecount(argc) WCHAR ** argv)
     {
         if (OSVersionCheck())
         {
-            ft.WriteLine(L"This version of shadowrun is not supported on this version of Windows." );
+            ft.WriteLine(L"This version of ShadowRun is not supported on this version of Windows." );
             return 2;
         }
 
         ft.WriteLine(
             L"\n"
-            L"SHADOWRUN.EXE 0.5 - Volume Shadow Copy Runner.\n"
+            L"ShadowRun.exe version 0.5 - Volume Shadow Copy Runner.\n"
             L"Copyright (C) 2020 Albertony. All rights reserved.\n"
             );
 
@@ -274,7 +274,7 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
                         // No match. Print an error and the usage
                         ft.WriteLine(L"\nERROR: invalid parameters %s", GetCommandLine());
                         ft.WriteLine(L"- Parameter %s is expected to be a volume or a file share path!", arguments[argIndex].c_str());
-                        ft.WriteLine(L"- Example: SHADOWRUN C:");
+                        ft.WriteLine(L"- Example: ShadowRun C:");
                         PrintUsage();
                         return errorCodeStart; // Default value: 1
                     }
@@ -426,7 +426,7 @@ void CommandLineParser::PrintUsage()
     FunctionTracer ft(DBG_INFO);
     ft.WriteLine(
         L"Usage:\n"
-        L"   SHADOWRUN [flags] [volumes]\n"
+        L"   ShadowRun [flags] [volumes]\n"
         L"\n"
         L"List of flags:\n"
         L"  -?                 - Displays this usage screen\n"
@@ -434,7 +434,7 @@ void CommandLineParser::PrintUsage()
         L"  -script={file.cmd} - Environment variable configuration script creation\n"
         L"  -exec={command}    - Custom command executed after shadow creation\n"
         L"  -wait              - Wait before program termination\n"
-        L"  -tracing           - Runs SHADOWRUN.EXE with enhanced diagnostics\n"
+        L"  -tracing           - Runs ShadowRun.exe with enhanced diagnostics\n"
         L"  -env               - Set process environment variables\n" // Added (not from orginal vshadow)
         L"  -mount             - Mount shadow copies as temporary drives\n" // Added (not from orginal vshadow)
         L"  -drive={ABC}       - Specific drive letters to use for mounting\n" // Added (not from orginal vshadow)

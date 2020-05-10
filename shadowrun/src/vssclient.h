@@ -5,7 +5,7 @@
 //  Regular VSS client class 
 //
 //  This class implements a high-level VSS API. It is not dependent on 
-//  SHADOWRUN.EXE command-line interface - It can be called from an UI program as well.
+//  ShadowRun.exe command-line interface - It can be called from an UI program as well.
 //
 
 struct SnapshotInfo

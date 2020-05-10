@@ -483,7 +483,7 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteA
         {
             // Add arguments directly. If an argument contain space this means it must be
             // already quoted. When such arguments are supplied into this application it
-            // means they must be triple quoted """arg""" (because shadowrun consumes
+            // means they must be triple quoted """arg""" (because ShadowRun consumes
             // the outer pair of quotes and the inner quotes must be escaped in the shell
             // by doubling them). It will then work with command "cmd" and arguments
             // "/c", "dir" """c:\program files""".
