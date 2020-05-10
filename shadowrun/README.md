@@ -506,7 +506,7 @@ shadowrun.exe -env -mount -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DR
 ```
 
 We are using the added features for [setting process environment variables](#setting-process-environment-variables),
-[automatically mounting](automatically-mounting) and [arguments to the executed command](#arguments-to-the-executed-command).
+[automatically mounting](#automatically-mounting) and [arguments to the executed command](#arguments-to-the-executed-command).
 We can also check the exit code, which will be the one from rclone, due to the added feature [pass-through exit code](#pass-through-exit-code).
 
 See description of the [quoting feature](#quoting) for description of possible quoting issues, and a more complex example.
