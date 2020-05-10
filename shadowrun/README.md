@@ -4,7 +4,9 @@ ShadowRun is a utility based on Microsoft's feature packed open source utility V
 single very specific feature: The creation of temporary read-only shadow copy and running of a specified
 utility that can work on this, before everything is automatically cleaned up.
 
-See root of repository [vss](..) for background information about Volume Shadow Copy Service (also known
+**Download pre-built binary ShadowRun.exe from root repository vss releases: [vss/releases](https://github.com/albertony/vss/vss/releases/)**
+
+See [root repository vss](https://github.com/albertony/vss) for background information about Volume Shadow Copy Service (also known
 as Volume Snapshot Service, VSS for short).
 
 Following is some write-up on motivation, and the process of trying to get VShadow to work satisfactorily.
