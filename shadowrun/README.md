@@ -40,10 +40,9 @@ Because then:
 - The files (in the snapshot) are never locked by other programs.
 
 Following [below](#using-vshadow) is a description of how you can use the original vshadow utility
-to achive this. Further down this site I [introduce](#introducing-shadowrun) my own ShadowRun
-application where I have added improvements that makes the solution easier, more flexible, and
-and more robust.
-
+to [achive this](#using-vshadow-with-rclone). Further down this site I [introduce](#introducing-shadowrun)
+my own ShadowRun application where I have added improvements that makes the [solution](#using-shadowrun-with-rclone)
+easier, more flexible, and more robust.
 
 ***
 ## Using VShadow
@@ -69,38 +68,85 @@ script is a valid batch script containing `SET` statements, so if you in the `-e
 specifies a batch script you it can include a `CALL` statement referencing the generated file
 named according to `-script`. Now evaluating environment variable `%SHADOW_DEVICE_1%` in your
 `-exec` script will return the device name of the temporary snapshot! So then we are close, but
-the last challenge is how to actually access the shadow device. Regular file commands and programs
+the last challenge is how to actually access the shadow device. Most regular file commands and programs
 cannot access it by the device name directly! Some do actually: COPY can be used to copy
-a file directly using `copy %VSHADOW_DEVICE_1%\somefile.txt c:\somefile_bak.txt`, but DIR
-does not work etc so you will probably not get to do what you want. Luckily the built-in `MKLINK`
-utility are able to create a directory symbolic link with the snapshot device as target, and then
-you can "mount" it to a regular directory path on your C: drive.
+a file directly using `copy %VSHADOW_DEVICE_1%\somefile.txt C:\somefile_bak.txt`, but DIR
+does not work etc so you will probably not get to do what you want. Luckily the built-in
+`MKLINK` utility are able to create a directory symbolic link with the snapshot device as target,
+and then you can "mount" it to a regular directory path on your C: drive.
 
-One trick to test this out interactively is to specify a "blocking" command in the `-exec`
-argument. For example, if you specify `-exec=C:\Windows\System32\notepad.exe` then after
-vshadow has created the snapshot it start the regular Notepad application and then wait
-for it to exit before cleaning up the snapshot! So now you can just leave the notepad
-window open, start another Command Prompt and access the snapshot! When you are done you
-just close the Notepad Window.
+One tip to test out your command step by step is to add `PAUSE` statements in the batch
+script specified to the `-exec` option. Then you vshadow will suspend during execution
+until you press a key, and you can e.g. use another Command Prompt instance to interact with
+temporary snapshot.
 
-### How to
+Another trick to test this out interactively is to specify a "blocking" command in the `-exec`
+argument. For example, if you specify `notepad.exe` then after vshadow has created the
+snapshot it start the regular Notepad application and then wait for it to exit before
+cleaning up the snapshot! So now you can just leave the notepad window open, start another
+Command Prompt and access the snapshot. When you are done you just close the Notepad Window,
+and the snapshot is gone.
 
-Let's say that we want to sync a directory `c:\data` to the cloud. Using rclone you would normally
-execute `rclone sync c:\data remote:data`. To make this command read source files from a VSS snapshot,
+```
+vshadow.exe -nw -script=setvars.cmd -exec=C:\Windows\System32\notepad.exe C:
+```
+
+Instead of notepad, you can also start a new instance of the "Command Interpreter".
+Then vshadow will start a new command prompt inside the one you started vshadow
+from, so it appears as if vshadow has just suspended and you can interact with
+the command prompt. Now to resume vshadow, to let it clean up (remove the snapshot)
+you type `exit` to get out of the "inner" command prompt.
+
+```
+vshadow.exe -nw -script=setvars.cmd -exec=C:\Windows\System32\cmd.exe C:
+```
+
+Another alternative is to make the snapshot "persistent", by adding the `-p` option. Then
+it will not be removed automatically when vshadow command has completed, it will
+even persists across restarts, so you can play around with it as long as you want.
+
+Create it:
+
+```
+vshadow.exe -p -nw -script=setvars.cmd C:
+```
+
+Load the generated script containing environment variables:
+
+```
+setvars.cmd
+```
+
+Mount it:
+
+```
+vshadow -el=%SHADOW_ID_1%,T:
+```
+
+Remove it:
+
+```
+vshadow -ds=%SHADOW_ID_1%
+```
+
+### Using VShadow with Rclone
+
+Let's say that we want to sync a directory `C:\Data\` to the cloud. Using rclone you would normally
+execute `rclone sync C:\Data\ remote:Data`. To make this command read source files from a VSS snapshot,
 you can create a batch script with the following content:
 
 ```
 rem Load the variables from a temporary script generated by vshadow.exe
 call "%~dp0setvars.cmd" || exit /b 1
 
-rem Create the symbolic link to the snapshot (the backslash after shadow_device_1 is important!)
-mklink /d c:\snapshot\ %shadow_device_1%\ || exit /b 1
+rem Create the symbolic link to the snapshot (the backslash after SHADOW_DEVICE_1 is important!)
+mklink /d C:\Snapshot\ %SHADOW_DEVICE_1%\ || exit /b 1
 
-rem Execute rclone with the source c:\snapshot\data containing a snapshot of c:\data
-rclone sync c:\snapshot\data\ remote:data
+rem Execute rclone with the source C:\Snapshot\Data containing a snapshot of C:\Data
+rclone sync C:\Snapshot\Data\ remote:Data
 
 rem Delete the symbolic link
-rmdir c:\snapshot\
+rmdir C:\Snapshot\
 
 rem Delete the temporary file created by vshadow.exe
 del "%~dp0setvars.cmd"
@@ -110,7 +156,7 @@ If you save this script as `exec.cmd` you could now execute the following comman
 directory:
 
 ```
-vshadow.exe -nw -script=setvars.cmd -exec=exec.cmd c:
+vshadow.exe -nw -script=setvars.cmd -exec=exec.cmd C:
 ```
 
 Or, if you want a single-click solution; create a second batch script in the same directory,
@@ -118,11 +164,11 @@ which executes this command - but with full paths of both file references to avo
 changing working directory:
 
 ```
-vshadow.exe -nw -script="%~dp0setvars.cmd" -exec="%~dp0exec.cmd" c:
+vshadow.exe -nw -script="%~dp0setvars.cmd" -exec="%~dp0exec.cmd" C:
 ```
 
 When the vshadow.exe command is executed, possibly from your single-click wrapper script, it will:
-1. Create a read-only snapshot of your c: drive.
+1. Create a read-only snapshot of your `C:` drive.
 2. Generate a file named `setvars.cmd` containing variables identifying the snapshot created.
 3. Execute `exec.cmd`, which will:
     1. Load variables from `setvars.cmd`.
@@ -136,11 +182,11 @@ When the vshadow.exe command is executed, possibly from your single-click wrappe
 
 Clarifications:
 - Vshadow must be run with administrator privileges, so with UAC enabled you must start `vsshadow.exe` or the wrapper script using the "Run as administrator" option.
-- The path `c:\snapshot\` is a temporary symbolic link only accessible while exec.cmd is running, you will see
+- The path `C:\Snapshot\` is a temporary symbolic link only accessible while exec.cmd is running, you will see
 it in Windows Explorer until the sync is completed. But the directory is read-only, because the
 `vshadow.exe` command included the command line argument `-nw` ("no writers").
-- The contents of `c:\snapshot\` that rclone sees, is a mirror image of `c:\`, meaning there will be a
-directory `c:\snapshot\Program Files` mirroring `c:\Program Files` etc. If this is confusing, read
+- The contents of `C:\Snapshot\` that rclone sees, is a mirror image of `C:\`, meaning there will be a
+directory `C:\Snapshot\Program Files` mirroring `C:\Program Files` etc. If this is confusing, read
 about improvements below.
 - Upon successful return vshadow will print message "Snapshot creation done.". This just means everything
 went well: It created the snapshot AND executed our script AND the snapshot was automatically deleted.
@@ -156,32 +202,32 @@ About error handling and robustness:
 assuming they are in the same directory as the script they are referenced from, and surrounding with double
 quotes in case there are spaces in the path. This will prevent any surprises when running from different
 working directories, e.g. "Run as administrator" is notorious for always setting working directory to `C:\Windows\System32`.
-- The mklink command returns error when the link path (`c:\snapshot\`) already exists, and this is important to
-handle. If we let the script just continue, rclone will try to sync a subfolder named data (`c:\snapshot\data`).
+- The mklink command returns error when the link path (`C:\Snapshot\`) already exists, and this is important to
+handle. If we let the script just continue, rclone will try to sync a subfolder named data (`C:\Snapshot\Data`).
 If this does not exist then rclone will just abort with error, so that is ok. Worse if this path does exists,
-then rclone will actually sync it. What is normally expected in `c:\snapshot\data` is a snapshot of `c:\data`.
-In worst case this has previously been successfully synced to `dest:data`, and after the last sync this new
-folder `c:\snapshot\data` has been created with content that is not at all similar to what is in `c:\data`.
-The result is that the current sync will end up deleting everything from `dest:data` and upload whatever is in
-`c:\snapshot\data`. A lot of "ifs" here, perhaps a bit paranoid to expect it, but unless the link path is
+then rclone will actually sync it. What is normally expected in `C:\Snapshot\Data` is a snapshot of `C:\Data`.
+In worst case this has previously been successfully synced to `remote:Data`, and after the last sync this new
+folder `C:\Snapshot\Data` has been created with content that is not at all similar to what is in `C:\Data`.
+The result is that the current sync will end up deleting everything from `remote:Data` and upload whatever is in
+`C:\Snapshot\Data`. A lot of "ifs" here, perhaps a bit paranoid to expect it, but unless the link path is
 very carefully chosen it could happen.
-- The mklink command does not verify the link target, so even if the variable %shadow_device_1% contains an invalid
+- The mklink command does not verify the link target, so even if the variable `%SHADOW_DEVICE_1%` contains an invalid
 value or for some reason is empty, the mklink command will succeed. The following rclone sync command using the
 link as source will then simply fail (`Failed to sync: directory not found`), so this so ok.
 
 ### Improvements
 
-It may be confusing that `c:\snapshot\` is a mirror image of `c:\`, and when referring `c:\snapshot\data` it is
-a mirror of `c:\data`. When writing more complex scripts this confusion may easily lead to bugs. You may find
-it less confusing if you create an alias `t:` that you can use when referrring to the snapshot. This can easily
-be done using the built-in `SUBST`command: Add `subst t: c:\` (error handling discussed later) before the
-`rclone sync` command and `subst t: /d` after, and change the sync command to use `t:` instead
-of `c:`: `rclone sync t:\snapshot\data\ dest:data`.
+It may be confusing that `C:\Snapshot\` is a mirror image of `C:\`, and when referring `C:\Snapshot\Data` it is
+a mirror of `C:\Data`. When writing more complex scripts this confusion may easily lead to bugs. You may find
+it less confusing if you create an alias `T:` that you can use when referrring to the snapshot. This can easily
+be done using the built-in `SUBST`command: Add `subst T: C:\` (error handling discussed later) before the
+`rclone sync` command and `subst T: /d` after, and change the sync command to use `T:` instead
+of `C:`: `rclone sync T:\Snapshot\Data\ remote:Data`.
 
-Instead of just making `t:` an alias to the entire `c:` drive, you can make it an alias directly into the
-snapshot image at `c:\snapshot\`. Then the paths on `c:` you would normally use with rclone directly without vss,
-now becomes identical when used on the snapshot `t:`. This may be even less confusing: `t:` is now the image of
-`c:`.  This has the additional benefit of not increasing the path lengths of the source paths that rclone gets
+Instead of just making `T:` an alias to the entire `C:` drive, you can make it an alias directly into the
+snapshot image at `C:\Snapshot\`. Then the paths on `C:` you would normally use with rclone directly without vss,
+now becomes identical when used on the snapshot `T:`. This may be even less confusing: `T:` is now the image of
+`C:`.  This has the additional benefit of not increasing the path lengths of the source paths that rclone gets
 to work with, in case that could hit some limit.
 
 Proper error handling is still recommended, early abort when any of the commands fail. In addition to the original
@@ -196,51 +242,50 @@ exit code from the `-exec` script it executes, and if the script returns nonzero
 return a non-zero exit code (but not the one returned by the script, see below), whch you then can check from
 the top level script (if it is a bit more complex than our `vs.cmd`).
 
-The resulting version of `exec.cmd` can be something like this:
+##### The resulting version of `exec.cmd` can be something like this:
 
 ```
 setlocal enabledelayedexpansion
 call "%~dp0setvars.cmd" || set exit_code=!errorlevel!&&goto end
-mklink /d c:\snapshot\ %shadow_device_1%\ || set exit_code=!errorlevel!&&goto end
-subst t:\ c:\snapshot\ || set exit_code=!errorlevel!&&goto remove_link
-rclone sync t:\data\ dest:data
+mklink /d C:\Snapshot\ %SHADOW_DEVICE_1%\ || set exit_code=!errorlevel!&&goto end
+subst T:\ C:\Snapshot\ || set exit_code=!errorlevel!&&goto remove_link
+rclone sync T:\Data\ remote:Data
 set exit_code=%errorlevel%
-subst t: /d
+subst T: /d
 :remove_link
-rmdir c:\snapshot\
+rmdir C:\Snapshot\
 :end
 del "%~dp0setvars.cmd"
 exit /b %exit_code%
 ```
 
 If everything goes fine until the rclone command, then the exit code from rclone is what will be returned.
-If the removal of virtual drive (`subst t: /d`) and directory symbolic link (`rmdir c:\snapshot\`) fails it is
+If the removal of virtual drive (`subst T: /d`) and directory symbolic link (`rmdir C:\Snapshot\`) fails it is
 just ignored. This will lead to the drive/directory being left accessible after the script has completed, and
 if you run the script again it will abort with error because the path/drive is already in use. You could add
 a check of the result from these two commands too. For example just write an additional warning
-(append `||ECHO WARNING: Manual cleanup required`), or also set the exit code if any of these fails
-(append ` || set exit_code=!errorlevel!&&ECHO WARNING: Manual cleanup required`), depending if you see this
+(append `||echo WARNING: Manual cleanup required`), or also set the exit code if any of these fails
+(append `||set exit_code=!errorlevel!&&echo WARNING: Manual cleanup required`), depending if you see this
 as something that should be reported as an error or since the rclone command passed you consider it more of
 a success.
 
 ### Alternative variants
 
-An alternative to using the SUBST command to create an alias, is to create a network share that you access via localhost. This can be done by replacing the `rclone sync c:\snapshot\data\ dest:data` line with something like this (could be extended with similar error handling as above):
+An alternative to using the SUBST command to create an alias, is to create a network share that you access
+via localhost. This can be done by replacing the `rclone sync C:\Snapshot\Data\ remote:Data` line with something
+like this (could be extended with similar error handling as above):
 
 ```
-net share snapshot=c:\snapshot
-rclone sync \\localhost\snapshot\data\ dest:data
-net share snapshot /delete
+net share Snapshot=C:\Snapshot
+rclone sync \\localhost\Snapshot\Data\ remote:Data
+net share Snapshot /delete
 ```
 
-Another alternative is to crate a dedicated volume/partition/drive. This is kind of an "intrusive" approach, but it is probably the most reliable and least code needed. With a dedicated drive just for mounting, there is for example little risk the mount path is in use by somethin else. You can create a dedicated partition on your hard drive to use only for mounting. It can be of a small symbolic size of just 1MB. If there is no room for a new partition on your disk (e.g. c: drive), then shrink it by just the 1MB. Create a new partition, and assign it a permanent drive letter, `b:` for example. Now change the content of `exec.cmd` to:
-
-```
-call "%~dp0setvars.cmd" || exit /b 1
-mklink /d b:\snapshot\ %shadow_device_1%\ || exit /b 1
-rclone sync b:\snapshot\data\ dest:data
-rmdir b:\snapshot\
-```
+A rather different approach could be to create the snapshot as a persistent one, using the `-p` option, as
+described in [Using VShadow](#using-vshadow). Then our `-exec` script could actually execute vshadow again
+to let it perform the mounting, using the `-el` or `-er` option. You would have to explicitely delete
+the snapshot again by executing vshadow again, using the `-ds` option. Perhaps it would be possible to
+run the command to remove snapshot from the `-exec` script? I haven't tried this.
 
 ### Exit codes
 
@@ -330,7 +375,7 @@ batch script for `-exec` in advance. No files will be generated, like with `-scr
 Less "moving parts", usually means less risk of unexpected behaviour!
 
 ```
-shadowrun.exe -env -mount -wait -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DRIVE_1%\Files myremote: --dry-run --filter-from %SHADOW_DRIVE_1%\Files\.rclonefilter --exclude-if-present .rcloneignore --checkers 6 --transfers 6 --buffer-size 64M --jottacloud-md5-memory-limit 512M --include /Files/Pictures/**
+shadowrun.exe -env -mount -wait -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DRIVE_1%\Files remote: --dry-run --filter-from %SHADOW_DRIVE_1%\Files\.rclonefilter --exclude-if-present .rcloneignore --checkers 6 --transfers 6 --buffer-size 64M --jottacloud-md5-memory-limit 512M --include /Files/Pictures/**
 ```
 
 Not all arguments can be quoted though. For example if you were to run the following
@@ -338,7 +383,7 @@ command it would fail for same reason as when you try to execute "dir" including
 quotes in a command prompt ('"dir"' is not recognized as an internal or external command)
 
 ```
-shadowrun.exe -env -mount -wait -exec=C:\Windows\System32\cmd.exe C: -- /C DIR %SHADOW_DRIVE_1%
+shadowrun.exe -env -mount -wait -exec=C:\Windows\System32\cmd.exe C: -- /C dir %SHADOW_DRIVE_1%
 ```
 
 To solve this there is an option `-nq` ("no quoting") which disables the forced quoting.
@@ -351,7 +396,7 @@ would no be quoted. Therefore you need an additional pair of quotes for the exec
 But now you get the problem of quotes inside quotes, so you need some kind of escaping.
 Adding an extra quote is the best way to do this, so this means you need triple quoting
 ```
--arg="""c:\program files"""
+-arg="""C:\Program Files"""
 ```
 
 Note that the `-nq` option will only have effect for following arguments. So you can
@@ -435,3 +480,21 @@ important since the VSS integration is Windows specific anyway.
 I removed build dependency to C++ ATL (Active Template Library), which is the
 original (vshadow) source code. It were used solely for the CComPtr smart pointer class,
 so I rewrote this to use the Microsoft specific _com_ptr_t class instead, which is very similar.
+
+## Using ShadowRun with Rclone
+
+Picking up on the case of [using VShadow with Rclone](#using-vshadow-with-rRclone), where we wanted
+to sync a directory `C:\Data\` to the cloud, and by use of rclone one would normally execute
+
+```
+rclone sync C:\Data\ remote:Data
+```
+
+Now instead of all the steps and batch scripting needed to make this work with VSS using the
+original `vshadow` utility, we can be able to do this very easy with `shadowrun`:
+
+```
+shadowrun.exe -env -mount -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DRIVE_1%\Data\ remote:Data
+```
+
+See description of the [quoting feature](#quoting) for description of possible quoting issues, and a more complex example.
