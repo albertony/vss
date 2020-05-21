@@ -183,7 +183,7 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
                     ft.WriteLine(L"ERROR: The parameter '%s' must be a non-zero integer!", value.c_str());
                     throw(E_INVALIDARG);
                 }
-                ft.WriteLine(L"(Option: Program errors will be reported with exit codes starting at '%d')");
+                ft.WriteLine(L"(Option: Program errors will be reported with exit codes starting at '%d')", errorCodeStart);
                 continue;
             }
 
