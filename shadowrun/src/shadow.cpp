@@ -1,5 +1,6 @@
 // Main header
 #include "stdafx.h"
+#include "version.h"
 #include <VersionHelpers.h>
 
 bool OSVersionCheck()
@@ -37,7 +38,7 @@ extern "C" int __cdecl wmain(__in int argc, __in_ecount(argc) WCHAR ** argv)
 
         ft.WriteLine(
             L"\n"
-            L"ShadowRun.exe version 0.5 - Volume Shadow Copy Runner.\n"
+            L"ShadowRun.exe v" VER_PRODUCTVERSION_STR " - Volume Shadow Copy Runner.\n"
             L"Copyright (C) 2020 Albertony. All rights reserved.\n"
             );
 

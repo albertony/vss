@@ -1,0 +1,9 @@
+#pragma once
+#ifdef VER_PRODUCTVERSION
+#undef VER_PRODUCTVERSION
+#endif
+#define VER_PRODUCTVERSION          0,5,1,0
+#ifdef VER_PRODUCTVERSION_STR
+#undef VER_PRODUCTVERSION_STR
+#endif
+#define VER_PRODUCTVERSION_STR      "0.5.1"
