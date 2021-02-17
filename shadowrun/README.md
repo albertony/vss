@@ -55,7 +55,8 @@ it will most likely get you to a solution that you can live with. The following 
 describes how you can do this, and some of the issues and downsides that lead me to create
 my own ShadowRun run utility with additional features.
 
-See main [readme](..) at the root of this repository, and the [readme](../vshadow) from the
+See main [readme](https://github.com/albertony/vss/) at the root of this repository,
+and the [readme](https://github.com/albertony/vss/tree/master/vshadow) from the
 original source code for an description of vshadow.
 
 Vshadow can be used with command-line argument `-nw` ("no writers") to create a temporary read-only
