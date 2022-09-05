@@ -114,10 +114,10 @@ const int MAX_VPRINTF_BUFFER_SIZE = 4096;
     HRESULT hrInternal = ErrorCode;                                                         \
     if (FAILED(hrInternal))                                                                 \
     {                                                                                       \
-        ft.WriteLine(L"\nERROR: COM call %s failed.", GEN_WSTRINGIZE(Text));                \
-        ft.WriteLine(L"- Returned HRESULT = 0x%08lx", hrInternal);                          \
-        ft.WriteLine(L"- Error text: %s", FunctionTracer::HResult2String(hrInternal).c_str());      \
-        ft.WriteLine(L"- Please re-run ShadowRun.exe with the /tracing option to get more details");\
+        ft.WriteErrorLine(L"ERROR: COM call %s failed!", GEN_WSTRINGIZE(Text));                \
+        ft.WriteErrorLine(L"- Returned HRESULT = 0x%08lx", hrInternal);                          \
+        ft.WriteErrorLine(L"- Error text: %s", FunctionTracer::HResult2String(hrInternal).c_str());      \
+        ft.WriteErrorLine(L"- Please re-run ShadowRun.exe with the -log-level=trace option to get more details");\
         throw(hrInternal);                                                                  \
     }                                                                                       \
 }
@@ -144,10 +144,10 @@ const int MAX_VPRINTF_BUFFER_SIZE = 4096;
     HRESULT hrInternal = HRESULT_FROM_WIN32(dwLastError);                                   \
     if (dwLastError != NOERROR)                                                             \
     {                                                                                       \
-        ft.WriteLine(L"\nERROR: Win32 call %s failed.", GEN_WSTRINGIZE(Text));          \
-        ft.WriteLine(L"- GetLastError() == %ld", dwLastError);                              \
-        ft.WriteLine(L"- Error text: %s", FunctionTracer::HResult2String(hrInternal).c_str());      \
-        ft.WriteLine(L"- Please re-run ShadowRun.exe with the /tracing option to get more details");\
+        ft.WriteErrorLine(L"ERROR: Win32 call %s failed!", GEN_WSTRINGIZE(Text));          \
+        ft.WriteErrorLine(L"- GetLastError() == %ld", dwLastError);                              \
+        ft.WriteErrorLine(L"- Error text: %s", FunctionTracer::HResult2String(hrInternal).c_str());      \
+        ft.WriteErrorLine(L"- Please re-run ShadowRun.exe with the -log-level=trace option to get more details");\
         throw(hrInternal);                                                                  \
     }                                                                                       \
 }

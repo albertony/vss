@@ -32,40 +32,27 @@ public:
 
     ~CommandLineParser();
 
-    // Main routine 
-    int MainRoutine(vector<wstring> arguments);
-
+    int Run(vector<wstring>& arguments);
 
 private:
 
-    // Implementation of various options
-    void PrintUsage();
-
-    //
-    //  Parsing utilities
-    //
-
+    int MainRoutine(vector<wstring>& arguments);
 
     // Returns TRUE if the argument is in the following formats
     //  -xxxx
     //  /xxxx
     // where xxxx is the option pattern
-    bool MatchArgument(wstring arg, wstring optionPattern);
+    bool MatchArgument(const wstring& arg, const wstring& optionPattern);
 
     // Returns TRUE if the argument is in the following formats
     //  -xxxx=yyyy
     //  /xxxx=yyyy
     // where xxxx is the option pattern and yyyy the additional parameter (optionally enclosed double quotes)
-    bool MatchArgument(wstring argument, wstring optionPattern, wstring & additionalParameter, bool dequote);
+    bool MatchArgument(const wstring& argument, const wstring& optionPattern, wstring& additionalParameter, bool dequote, bool lower);
 
-
-    //
-    //  Private data members
-    //
 
     // The VSS client
     VssClient   m_vssClient;
-    
 };
 
 

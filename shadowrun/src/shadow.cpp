@@ -3,22 +3,15 @@
 #include "version.h"
 #include <VersionHelpers.h>
 
-bool OSVersionCheck()
-{
-    bool bIsWin8 = FALSE;
-    bIsWin8 = IsWindows8OrGreater();
-    return !bIsWin8;
-}
-
 
 ///////////////////////////////////////////////////////////////////
 //
-//  Main routine 
+//  Main routine
 //
 //  Default return values:
 //      0 - Success
 //      1 - Object not found
-//      2 - Runtime Error 
+//      2 - Runtime Error
 //      3 - Memory allocation error
 //
 extern "C" int __cdecl wmain(__in int argc, __in_ecount(argc) WCHAR ** argv)
@@ -30,37 +23,26 @@ extern "C" int __cdecl wmain(__in int argc, __in_ecount(argc) WCHAR ** argv)
 
     try
     {
-        if (OSVersionCheck())
-        {
-            ft.WriteLine(L"This version of ShadowRun is not supported on this version of Windows." );
-            return 2;
-        }
-
-        ft.WriteLine(
-            L"\n"
-            L"ShadowRun.exe v" VER_PRODUCTVERSION_STR " - Volume Shadow Copy Runner.\n"
-            L"Copyright (C) 2020 Albertony. All rights reserved.\n"
-            );
-
-        // Build the argument vector 
+        // Build the argument vector
         vector<wstring> arguments;
         for(int i = 1; i < argc; i++)
             arguments.push_back(argv[i]);
 
-        // Process the arguments and execute the main options
-        return obj.MainRoutine(arguments);
+        // Run actions based on arguments
+        return obj.Run(arguments);
     }
     catch(bad_alloc ex)
     {
         // Generic STL allocation error
-        ft.WriteLine(L"ERROR: Memory allocation error");
+        ft.WriteErrorLine(L"ERROR: Memory allocation error!");
         return 3;
     }
     catch(exception ex)
     {
         // We should never get here (unless we have a bug)
         _ASSERTE(false);
-        ft.WriteLine(L"ERROR: STL Exception caught: %S", ex.what());
+        ft.WriteErrorLine(L"ERROR: STL Exception caught!");
+        ft.WriteErrorLine(L"- Exception text: %S", ex.what());
         return 2;
     }
     catch(HRESULT hr)
@@ -68,6 +50,162 @@ extern "C" int __cdecl wmain(__in int argc, __in_ecount(argc) WCHAR ** argv)
         ft.Trace(DBG_INFO, L"HRESULT Error caught: 0x%08lx", hr);
         return 2;
     }
+}
+
+
+// Verify that OS version is supported
+bool OSVersionCheck()
+{
+    bool bIsWin8 = FALSE;
+    bIsWin8 = IsWindows8OrGreater();
+    return !bIsWin8;
+}
+
+
+// Print logo
+void PrintLogo()
+{
+    FunctionTracer ft(DBG_INFO);
+    ft.WriteInfoLine(
+        L"ShadowRun.exe (Volume Shadow Copy Runner) version " VER_PRODUCTVERSION_STR ".\n"
+        L"Copyright (C) 2022 Albertony. All rights reserved.\n"
+    );
+}
+
+
+//  Prints the command line options
+void PrintUsage(bool startWithNewline)
+{
+    FunctionTracer ft(DBG_INFO);
+    if (startWithNewline)
+    {
+        ft.WriteInfoLine(L"");
+    }
+    ft.WriteInfoLine(
+        L"Usage:\n"
+        L"   ShadowRun [flags] [volumes]\n"
+        L"\n"
+        L"List of flags:\n"
+        L"  -?                 - Displays this usage screen\n"
+        L"  -h                 - Displays this usage screen\n" // Added (not from orginal vshadow)
+        L"  -nw                - Create no-writer shadow copies (implied and deprecated, only for vshadow syntax compat)\n" // Implied, but kept for backwards compatibility with vshadow
+        L"  -script={file.cmd} - Environment variable configuration script creation\n"
+        L"  -exec={command}    - Custom command executed after shadow creation\n"
+        L"  -wait              - Wait before program termination\n"
+        L"  -tracing           - Runs ShadowRun.exe with enhanced diagnostics\n" // Deprecated, should use -log-level=trace instead, but kept for backwards compatibility with vshadow
+        L"  -env               - Set process environment variables\n" // Added (not from orginal vshadow)
+        L"  -mount             - Mount shadow copies as temporary drives\n" // Added (not from orginal vshadow)
+        L"  -drive={ABC}       - Specific drive letters to use for mounting\n" // Added (not from orginal vshadow)
+        L"  -errorcode=1       - First exit code value to use for internal errors, not from the command\n" // Added (not from orginal vshadow)
+        L"  -nq                - Do not force quotes around arguments specified with -arg or after -- with quotes\n" // Added (not from orginal vshadow)
+        L"  -arg={string}      - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
+        L"  -log-level={debug} - Log level, one of: trace, debug, info (default), notice (unused), error or silent\n" // Added (not from orginal vshadow), replaces tracing from original vshadow
+        L"  -- {args}...       - Special flag that makes all following arguments being passed directly to the -exec\n" // Added (not from orginal vshadow)
+    );
+}
+
+
+// Constructor
+CommandLineParser::CommandLineParser()
+{
+    FunctionTracer ft(DBG_INFO);
+}
+
+
+// Destructor
+CommandLineParser::~CommandLineParser()
+{
+    FunctionTracer ft(DBG_INFO);
+}
+
+
+int CommandLineParser::Run(vector<wstring>& arguments)
+{
+    FunctionTracer ft(DBG_INFO);
+
+    // Check platform support
+    if (OSVersionCheck())
+    {
+        FunctionTracer::SetLogLevel(FunctionTracer::LOGLEVEL_INFO); // Force log level to make sure error is actually shown, although info is currently default
+        PrintLogo();
+        ft.WriteErrorLine(L"ERROR: This version of Windows is not supported!");
+        throw(E_INVALIDARG);
+    }
+
+    // Check for help request (no arguments, or single argument -? or -h)
+    if (arguments.size() == 0 || (arguments.size() == 1 && (MatchArgument(arguments[0], L"?") || MatchArgument(arguments[0], L"h"))))
+    {
+        FunctionTracer::SetLogLevel(FunctionTracer::LOGLEVEL_INFO); // Force log level to make sure help is actually shown, although info is currently default
+        PrintLogo();
+        PrintUsage(false);
+        return EXIT_SUCCESS; // Default value: 0
+    }
+
+    // Handle -log-level or -tracing argument
+    int logLevel = -1;
+    for (vector<wstring>::iterator it = arguments.begin(); it != arguments.end(); )
+    {
+        wstring value;
+        if (MatchArgument(*it, L"log-level", value, true, true))
+        {
+            if (value == L"trace")
+            {
+                logLevel = FunctionTracer::LOGLEVEL_TRACE;
+            }
+            else if (value == L"debug")
+            {
+                logLevel = FunctionTracer::LOGLEVEL_DEBUG;
+            }
+            else if (value == L"info")
+            {
+                logLevel = FunctionTracer::LOGLEVEL_INFO;
+            }
+            else if (value == L"notice")
+            {
+                logLevel = FunctionTracer::LOGLEVEL_NOTICE;
+            }
+            else if (value == L"error")
+            {
+                logLevel = FunctionTracer::LOGLEVEL_ERROR;
+            }
+            else if (value == L"silent")
+            {
+                logLevel = FunctionTracer::LOGLEVEL_SILENT;
+            }
+            else
+            {
+                PrintLogo();
+                ft.WriteErrorLine(L"ERROR: The parameter '%s' must be trace, debug, info, notice, error or silent!", value.c_str());
+                PrintUsage(true);
+                throw(E_INVALIDARG);
+            }
+            FunctionTracer::SetLogLevel(logLevel);
+            PrintLogo(); // Note: Postponed until log level is set!
+            ft.WriteDebugLine(L"Log level %s", value.c_str()); // Will only be logged if the level is debug or trace
+            it = arguments.erase(it);
+            break;
+        }
+        else if (MatchArgument(*it, L"tracing"))
+        {
+            logLevel = FunctionTracer::LOGLEVEL_TRACE;
+            FunctionTracer::SetLogLevel(logLevel);
+            PrintLogo(); // Note: Postponed until log level is set!
+            ft.WriteDebugLine(L"Log level trace - consider using newer option -log-level=trace instead of -tracing");
+            it = arguments.erase(it);
+            break;
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    if (logLevel < 0)
+    {
+        PrintLogo();
+        ft.WriteDebugLine(L"Using default log level"); // Will not be logged, as long as default log level is info
+    }
+
+    return MainRoutine(arguments);
 }
 
 
@@ -81,7 +219,7 @@ extern "C" int __cdecl wmain(__in int argc, __in_ecount(argc) WCHAR ** argv)
 //
 //  On error, this function throws
 //
-int CommandLineParser::MainRoutine(vector<wstring> arguments)
+int CommandLineParser::MainRoutine(vector<wstring>& arguments)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -126,6 +264,8 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
     // Wait after shadow copy has been created
     bool waitBeforeCleanup = false;
 
+    ft.WriteDebugLine(L"Checking options...");
+
     try
     {
         // Enumerate each argument
@@ -136,23 +276,23 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             //
 
             // Check for the script generation option
-            if (MatchArgument(arguments[argIndex], L"script", environmentScript, true))
+            if (MatchArgument(arguments[argIndex], L"script", environmentScript, true, false))
             {
-                ft.WriteLine(L"(Option: Environment variable configuration script creation '%s')", environmentScript.c_str());
+                ft.WriteDebugLine(L"- Environment variable configuration script creation '%s'", environmentScript.c_str());
                 continue;
             }
 
             // Check for the command execution option
-            if (MatchArgument(arguments[argIndex], L"exec", execCommand, true)) // Note: Dequote because quotes are always added on execution due to security reasons
+            if (MatchArgument(arguments[argIndex], L"exec", execCommand, true, false)) // Note: Dequote because quotes are always added on execution due to security reasons
             {
-                ft.WriteLine(L"(Option: Execute binary/script after shadow creation '%s')", execCommand.c_str());
+                ft.WriteDebugLine(L"- Execute binary/script after shadow creation '%s'", execCommand.c_str());
 
                 // Check if the command is a valid CMD/EXE file
                 DWORD dwAttributes = GetFileAttributes((LPWSTR)execCommand.c_str());
                 if ((dwAttributes == INVALID_FILE_ATTRIBUTES) || ((dwAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0))
                 {
-                    ft.WriteLine(L"ERROR: The parameter '%s' must be an existing file!", execCommand.c_str());
-                    ft.WriteLine(L"- Note: For parameters use '-arg' or '--' options");
+                    ft.WriteErrorLine(L"ERROR: The parameter '%s' must be an existing file!", execCommand.c_str());
+                    ft.WriteErrorLine(L"- Note: For parameters use '-arg' or '--' options");
                     throw(E_INVALIDARG);
                 }
                 continue;
@@ -161,37 +301,29 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             // Wait after shadow copy has been created
             if (MatchArgument(arguments[argIndex], L"wait"))
             {
-                ft.WriteLine(L"(Option: Wait after shadow copy has been created)");
+                ft.WriteDebugLine(L"- Wait after shadow copy has been created");
                 waitBeforeCleanup = true;
                 continue;
             }
 
-            // Check for the tracing option
-            if (MatchArgument(arguments[argIndex], L"tracing"))
-            {
-                ft.WriteLine(L"(Option: Enable tracing)");
-                FunctionTracer::EnableTracingMode();
-                continue;
-            }
-
-            // Check for the tracing option
+            // Check for the errorcode option
             wstring value;
-            if (MatchArgument(arguments[argIndex], L"errorcode", value, true))
+            if (MatchArgument(arguments[argIndex], L"errorcode", value, true, false))
             {
                 errorCodeStart = _wtoi(value.c_str());
                 if (errno == ERANGE || errorCodeStart == 0)
                 {
-                    ft.WriteLine(L"ERROR: The parameter '%s' must be a non-zero integer!", value.c_str());
+                    ft.WriteErrorLine(L"ERROR: The parameter '%s' must be a non-zero integer!", value.c_str());
                     throw(E_INVALIDARG);
                 }
-                ft.WriteLine(L"(Option: Program errors will be reported with exit codes starting at '%d')", errorCodeStart);
+                ft.WriteDebugLine(L"- Program errors will be reported with exit codes starting at %d", errorCodeStart);
                 continue;
             }
 
             // Check for the environment option
             if (MatchArgument(arguments[argIndex], L"env"))
             {
-                ft.WriteLine(L"(Option: Set process environment)");
+                ft.WriteDebugLine(L"- Set process environment");
                 setProcessEnvironment = true;
                 continue;
             }
@@ -199,15 +331,15 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             // Check for the mount option
             if (MatchArgument(arguments[argIndex], L"mount"))
             {
-                ft.WriteLine(L"(Option: Mount shadow copies as temporary drives)");
+                ft.WriteDebugLine(L"- Mount shadow copies as temporary drives");
                 mountSnapshots = true;
                 continue;
             }
 
             // Check for the drive option
-            if (MatchArgument(arguments[argIndex], L"drive", mountDriveLetters, true))
+            if (MatchArgument(arguments[argIndex], L"drive", mountDriveLetters, true, false))
             {
-                ft.WriteLine(L"(Option: Mount shadow copies as temporary drives '%s')", mountDriveLetters.c_str());
+                ft.WriteDebugLine(L"- Mount shadow copies as temporary drives '%s'", mountDriveLetters.c_str());
                 mountSnapshots = true; // Implied
                 continue;
             }
@@ -218,10 +350,10 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             // any quoting are kept as is, so that only the arguments actually specified with quotes
             // will be quoted when executing the command, but must then quote only the value
             // not "-arg=value", but -arg="value").
-            if (MatchArgument(arguments[argIndex], L"arg", value, addExecArgumentQuotes))
+            if (MatchArgument(arguments[argIndex], L"arg", value, addExecArgumentQuotes, false))
             {
                 execArguments.push_back(value);
-                ft.WriteLine(L"(Option: Including additional argument when executing binary/script '%s')", value.c_str());
+                ft.WriteDebugLine(L"- Including additional argument when executing binary/script '%s'", value.c_str());
                 continue;
             }
 
@@ -229,7 +361,7 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             // Note: For -arg this only has affect for the ones not already specified!
             if (MatchArgument(arguments[argIndex], L"nq"))
             {
-                ft.WriteLine(L"(Option: Do not force quotes around arguments specified with -arg or after -- with quotes)");
+                ft.WriteDebugLine(L"- Do not force quotes around arguments specified with -arg or after -- with quotes");
                 addExecArgumentQuotes = false; // Variable logic reversed, so setting quoting=false
                 continue;
             }
@@ -237,20 +369,14 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
             // Create no-writer shadow copies (deprecated option kept only for compatibility with vshadow)
             if (MatchArgument(arguments[argIndex], L"nw"))
             {
-                ft.WriteLine(L"(Option: No-writers option detected, deprecated option kept only for compatibility with vshadow)");
+                ft.WriteDebugLine(L"- No-writers option detected, deprecated option kept only for compatibility with vshadow");
                 continue;
             }
 
-            // Check for /? or -?
-            if (MatchArgument(arguments[argIndex], L"?"))
-                break;
-
-            // Check if the arguments are volumes or file share paths. If yes, try to create the shadow copy set 
+            // Check if rest (or until --) are unnamed arguments are volumes or file share paths. If yes, try to create the shadow copy set.
             if (IsVolume(arguments[argIndex]) || IsUNCPath((VSS_PWSZ)arguments[argIndex].c_str()))
             {
-                ft.WriteLine(L"(Option: Create shadow copy set)");
-
-                ft.Trace(DBG_INFO, L"\nAttempting to create a shadow copy set... (volume %s was added as parameter)", arguments[argIndex].c_str());
+                ft.Trace(DBG_INFO, L"Volume %s was added as unnamed parameter", arguments[argIndex].c_str());
 
                 // Make sure that all the arguments are volumes
                 vector<wstring> volumeList;
@@ -273,10 +399,10 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
                     else if (!(IsVolume(arguments[argIndex]) || IsUNCPath((VSS_PWSZ)arguments[argIndex].c_str())))
                     {
                         // No match. Print an error and the usage
-                        ft.WriteLine(L"\nERROR: invalid parameters %s", GetCommandLine());
-                        ft.WriteLine(L"- Parameter %s is expected to be a volume or a file share path!", arguments[argIndex].c_str());
-                        ft.WriteLine(L"- Example: ShadowRun C:");
-                        PrintUsage();
+                        ft.WriteErrorLine(L"\nERROR: invalid parameters %s", GetCommandLine());
+                        ft.WriteErrorLine(L"- Parameter %s is expected to be a volume or a file share path!", arguments[argIndex].c_str());
+                        ft.WriteErrorLine(L"- Example: ShadowRun C:");
+                        PrintUsage(true);
                         return errorCodeStart; // Default value: 1
                     }
                     else
@@ -310,39 +436,43 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
 
                 if (waitBeforeCleanup)
                 {
-                    ft.WriteLine(L"\nSuspending program while any created shadow copies are still available.");
-                    ft.WriteLine(L"\nPress <ENTER> to continue...");
+                    ft.WriteInfoLine(L"Suspending ShadowRun while leaving any created shadow copies available for use");
+                    ft.Write(L"Press <ENTER> to continue..."); // Note: Write regardless of log-level!
                     (void)getchar();
                 }
 
                 if (mountSnapshots)
                     m_vssClient.UnmountSnapshots();
 
-                ft.WriteLine(L"\nProgram completed, returning exit code %d.", exitCode);
+                ft.WriteInfoLine(L"ShadowRun completed with exit code %d", exitCode);
 
                 return exitCode; // Default value: 0
             }
 
-            // No match. Print an error and the usage
-            ft.WriteLine(L"\nERROR: invalid parameter '%s'\n", arguments[argIndex].c_str());
-            PrintUsage();
+            // No match. Print an error and the usage.
+            // Report as "not epected" instead of "not valid" parameter, in case it is one
+            // of the arguments only supported as stand-alone argument, i.e. -log-level, -tracing, -? or -h.
+            ft.WriteErrorLine(L"ERROR: Parameter '%s' was not expected!", arguments[argIndex].c_str());
+            PrintUsage(true);
             return errorCodeStart;  // Default value: 1
         }
 
-        PrintUsage();
-        return exitCode; // Default value: 0
+        ft.WriteErrorLine(L"ERROR: Missing volume parameter!");
+        PrintUsage(true);
+        return errorCodeStart; // Default value: 1
     }
     catch(bad_alloc ex)
     {
         // Generic STL allocation error
-        ft.WriteLine(L"ERROR: Memory allocation error");
+        ft.WriteErrorLine(L"ERROR: Memory allocation error!");
         return errorCodeStart + 2; // Default value: 3
     }
     catch(exception ex)
     {
         // We should never get here (unless we have a bug)
         _ASSERTE(false);
-        ft.WriteLine(L"ERROR: STL Exception caught: %S", ex.what());
+        ft.WriteErrorLine(L"ERROR: STL Exception caught!");
+        ft.WriteErrorLine(L"- Exception text: %S", ex.what());
         return errorCodeStart + 1; // Default value: 2
     }
     catch(HRESULT hr)
@@ -358,7 +488,7 @@ int CommandLineParser::MainRoutine(vector<wstring> arguments)
 //  -xxxx
 //  /xxxx
 // where xxxx is the option pattern
-bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern)
+bool CommandLineParser::MatchArgument(const wstring& argument, const wstring& optionPattern)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -375,7 +505,7 @@ bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern)
 //  -xxxx=yyyy
 //  /xxxx=yyyy
 // where xxxx is the option pattern and yyyy the additional parameter (optionally enclosed double quotes)
-bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern, wstring& additionalParameter, bool dequote)
+bool CommandLineParser::MatchArgument(const wstring& argument, const wstring& optionPattern, wstring& additionalParameter, bool dequote, bool lower)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -413,45 +543,12 @@ bool CommandLineParser::MatchArgument(wstring argument, wstring optionPattern, w
         if ((additionalParameter[0] == L'"') && (additionalParameter[lastPos] == L'"'))
             additionalParameter = additionalParameter.substr(1, additionalParameter.length() - 2);
     }
+    if (lower)
+    {
+        // Make lowercase. Note that another alternative is to use IsEqual for case insensitive comparison.
+        transform(additionalParameter.begin(), additionalParameter.end(), additionalParameter.begin(), towlower);
+    }
     ft.Trace(DBG_INFO, L"Return true; (additional param = %s)", additionalParameter.c_str());
     
     return true;
-}
-
-
-// 
-//  Prints the command line options
-//
-void CommandLineParser::PrintUsage()
-{
-    FunctionTracer ft(DBG_INFO);
-    ft.WriteLine(
-        L"Usage:\n"
-        L"   ShadowRun [flags] [volumes]\n"
-        L"\n"
-        L"List of flags:\n"
-        L"  -?                 - Displays this usage screen\n"
-        L"  -nw                - Create no-writer shadow copies (implied and deprecated, only for vshadow syntax compat).\n" // Implied, but kept for backwards compatibility
-        L"  -script={file.cmd} - Environment variable configuration script creation\n"
-        L"  -exec={command}    - Custom command executed after shadow creation\n"
-        L"  -wait              - Wait before program termination\n"
-        L"  -tracing           - Runs ShadowRun.exe with enhanced diagnostics\n"
-        L"  -env               - Set process environment variables\n" // Added (not from orginal vshadow)
-        L"  -mount             - Mount shadow copies as temporary drives\n" // Added (not from orginal vshadow)
-        L"  -drive={ABC}       - Specific drive letters to use for mounting\n" // Added (not from orginal vshadow)
-        L"  -errorcode=1       - First exit code value to use for internal errors, not from the command\n" // Added (not from orginal vshadow)
-        L"  -nq                - Do not force quotes around arguments specified with -arg or after -- with quotes\n" // Added (not from orginal vshadow)
-        L"  -arg={string}      - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
-        L"  -- {args}...       - Special flag that makes all following arguments being passed directly to the -exec\n" // Added (not from orginal vshadow)
-        L"\n" );
-}
-
-CommandLineParser::CommandLineParser()
-{
-}
-
-// Destructor
-CommandLineParser::~CommandLineParser()
-{
-    FunctionTracer ft(DBG_INFO);
 }

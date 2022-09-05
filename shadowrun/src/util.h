@@ -141,7 +141,7 @@ inline GUID & WString2Guid(wstring src)
     HRESULT hr = ::CLSIDFromString(comstring.GetBSTR(), &result);
     if (FAILED(hr))
     {
-        ft.WriteLine(L"ERROR: The string '%s' is not formatted as a GUID!", src.c_str());
+        ft.WriteErrorLine(L"ERROR: The string '%s' is not formatted as a GUID!", src.c_str());
         throw(E_INVALIDARG);
     }
 
@@ -298,7 +298,7 @@ inline wstring GetUniqueVolumeNameForPath(wstring path)
     wstring volumeRootPath(MAX_PATH, L'\0');
     wstring volumeUniqueName(MAX_PATH, L'\0');
 
-    ft.Trace(DBG_INFO, L"- Get volume path name for %s ...", path.c_str());
+    ft.Trace(DBG_INFO, L"- Get volume path name for %s", path.c_str());
 
     // Add the backslash termination, if needed
     path = AppendBackslash(path);
@@ -318,19 +318,19 @@ inline wstring GetUniqueVolumeNameForPath(wstring path)
 
             CHECK_WIN32_ERROR(dwRet, "ClusterPrepareSharedVolumeForBackup");
 
-            ft.Trace(DBG_INFO, L"- Path name: %s ...", volumeRootPath.c_str());
-            ft.Trace(DBG_INFO, L"- Unique volume name: %s ...", volumeUniqueName.c_str());
+            ft.Trace(DBG_INFO, L"- Path name: %s", volumeRootPath.c_str());
+            ft.Trace(DBG_INFO, L"- Unique volume name: %s", volumeUniqueName.c_str());
         }
         else
         {
             // Get the root path of the volume
         
             CHECK_WIN32(GetVolumePathName((LPCWSTR)path.c_str(), WString2Buffer(volumeRootPath), (DWORD)volumeRootPath.length()));
-            ft.Trace(DBG_INFO, L"- Path name: %s ...", volumeRootPath.c_str());
+            ft.Trace(DBG_INFO, L"- Path name: %s", volumeRootPath.c_str());
 
             // Get the unique volume name
             CHECK_WIN32(GetVolumeNameForVolumeMountPoint((LPCWSTR)volumeRootPath.c_str(), WString2Buffer(volumeUniqueName), (DWORD)volumeUniqueName.length()));
-            ft.Trace(DBG_INFO, L"- Unique volume name: %s ...", volumeUniqueName.c_str());
+            ft.Trace(DBG_INFO, L"- Unique volume name: %s", volumeUniqueName.c_str());
         }
     }
     else
@@ -351,8 +351,8 @@ inline wstring GetUniqueVolumeNameForPath(wstring path)
         ::CoTaskMemFree(pwszVolumeRootPath);
         pwszVolumeRootPath = NULL;
 
-        ft.Trace(DBG_INFO, L"- Path name: %s ...", volumeRootPath.c_str());
-        ft.Trace(DBG_INFO, L"- Unique volume name: %s ...", volumeUniqueName.c_str());
+        ft.Trace(DBG_INFO, L"- Path name: %s", volumeRootPath.c_str());
+        ft.Trace(DBG_INFO, L"- Unique volume name: %s", volumeUniqueName.c_str());
     }
     return volumeUniqueName;
 }
@@ -364,7 +364,7 @@ inline wstring GetDeviceForVolumeName(wstring volumeName)
 {
     FunctionTracer ft(DBG_INFO);
 
-    ft.Trace(DBG_INFO, L"- GetDeviceForVolumeName for '%s' ... ", volumeName.c_str());
+    ft.Trace(DBG_INFO, L"- GetDeviceForVolumeName for '%s'", volumeName.c_str());
 
     // The input parameter is a valid volume name
     _ASSERTE(wcslen(volumeName.c_str()) > 0);
@@ -444,9 +444,9 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteA
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
 
-    ZeroMemory( &si, sizeof(si) );
+    ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
-    ZeroMemory( &pi, sizeof(pi) );
+    ZeroMemory(&pi, sizeof(pi));
 
     //
     // Security Remarks - CreateProcess
@@ -491,8 +491,9 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteA
         }
     }
 
-    ft.WriteLine(L"Executing command: %s", command.c_str());
-    ft.WriteLine(L"-----------------------------------------------------");
+    ft.WriteInfoLine(L"Executing command...");
+    ft.WriteDebugLine(L"- Command-line: %s", command.c_str());
+    ft.WriteInfoLine(L"-----------------------------------------------------");
 
     // Note: By not setting module name but sending command as first string of the
     // command line it can be name of a batch script and it will be executed directly,
@@ -500,14 +501,14 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteA
     // as the command line.
 
     // Start the child process.
-    CHECK_WIN32( CreateProcess( NULL, // No module name (use command line). 
-        (LPWSTR)command.c_str(), // Command line. 
-        NULL,             // Process handle not inheritable. 
-        NULL,             // Thread handle not inheritable. 
-        FALSE,            // Set handle inheritance to FALSE. 
-        0,                // No creation flags. 
-        NULL,             // Use parent's environment block. 
-        NULL,             // Use parent's starting directory. 
+    CHECK_WIN32( CreateProcess( NULL, // No module name (use command line).
+        (LPWSTR)command.c_str(), // Command line.
+        NULL,             // Process handle not inheritable.
+        NULL,             // Thread handle not inheritable.
+        FALSE,            // Set handle inheritance to FALSE.
+        0,                // No creation flags.
+        NULL,             // Use parent's environment block.
+        NULL,             // Use parent's starting directory.
         &si,              // Pointer to STARTUPINFO structure.
         &pi ))             // Pointer to PROCESS_INFORMATION structure.
 
@@ -517,12 +518,12 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteA
 
     // Wait until child process exits.
     CHECK_WIN32( WaitForSingleObject( pi.hProcess, INFINITE ) == WAIT_OBJECT_0);
-    ft.WriteLine(L"-----------------------------------------------------");
+    ft.WriteInfoLine(L"-----------------------------------------------------");
 
     // Checking the exit code
     DWORD dwExitCode = 0;
     CHECK_WIN32( GetExitCodeProcess( pi.hProcess, &dwExitCode ) );
-    ft.WriteLine(L"Command returned with exit code: %d", dwExitCode);
+    ft.WriteInfoLine(L"Command completed with exit code %d", dwExitCode);
     return dwExitCode;
 }
 
@@ -537,7 +538,7 @@ inline wchar_t GetNextAvailableDriveLetter()
         ++i, ++driveLetter);
     if (driveLetter < L'A' || driveLetter > L'Z')
     {
-        ft.WriteLine(L"ERROR: Invalid mount drive letter!");
+        ft.WriteErrorLine(L"ERROR: Invalid mount drive letter!");
         throw(E_UNEXPECTED);
     }
     return driveLetter;
@@ -548,7 +549,7 @@ inline wchar_t VerifyAvailableDriveLetter(wchar_t driveLetter)
     FunctionTracer ft(DBG_INFO);
     if (driveLetter < L'A' || driveLetter > L'Z')
     {
-        ft.WriteLine(L"ERROR: Invalid mount drive letter!");
+        ft.WriteErrorLine(L"ERROR: Invalid mount drive letter!");
         throw(E_UNEXPECTED);
     }
     auto driveMask = GetLogicalDrives();
@@ -558,7 +559,7 @@ inline wchar_t VerifyAvailableDriveLetter(wchar_t driveLetter)
     }
     if (driveMask & (1 << (driveLetter - L'A')))
     {
-        ft.WriteLine(L"ERROR: Mount drive letter '%c' is already in use!");
+        ft.WriteErrorLine(L"ERROR: Mount drive letter '%c' is already in use!");
         throw(E_UNEXPECTED);
     }
     return driveLetter;

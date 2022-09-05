@@ -65,6 +65,8 @@ public:
 
 private:
 
+    void SetProcessEnvironmentVariable(LPCWSTR name, LPCWSTR value);
+
     // Waits for the async operation to finish
     void WaitAndCheckForAsyncOperation(IVssAsync*  pAsync);
 

@@ -11,18 +11,16 @@ void VssClient::CreateSnapshotSet(vector<wstring> volumeList)
     // Start the shadow set
     CHECK_COM(m_pVssObject->StartSnapshotSet(&m_latestSnapshotSet.id))
     m_latestSnapshotSet.idString = Guid2WString(m_latestSnapshotSet.id);
-    ft.WriteLine(L"Creating shadow set %s", m_latestSnapshotSet.idString.c_str());
+    ft.WriteInfoLine(L"Creating shadow set %s...", m_latestSnapshotSet.idString.c_str());
 
     // Add the specified volumes to the shadow set
     AddToSnapshotSet(volumeList);
 
-    // Creates the shadow set 
+    // Creates the shadow set
     DoSnapshotSet();
 
     // Finalize
     SnapshotSetCreated();
-
-    ft.WriteLine(L"Shadow set succesfully created.");
 }
 
 // Add volumes to the shadow set
@@ -36,9 +34,9 @@ void VssClient::AddToSnapshotSet(vector<wstring> volumeList)
     for (size_t i = 0; i < volumeList.size(); ++i)
     {
         wstring volume = volumeList[i];
-        ft.WriteLine(L"- Adding volume %s [%s] to the shadow set...",
-            volume.c_str(),
-            GetDisplayNameForVolume(volume).c_str());
+        ft.WriteInfoLine(L"Adding %s (%s) to the shadow set...",
+            GetDisplayNameForVolume(volume).c_str(),
+            volume.c_str());
 
         VSS_ID snapshotId;
         CHECK_COM(m_pVssObject->AddToSnapshotSet((LPWSTR)volume.c_str(), GUID_NULL, &snapshotId));
@@ -55,7 +53,8 @@ void VssClient::DoSnapshotSet()
 {
     FunctionTracer ft(DBG_INFO);
 
-    ft.WriteLine(L"Creating the shadow (DoSnapshotSet) ... ");
+    ft.WriteInfoLine(L"Creating the shadow...");
+    ft.WriteDebugLine(L"COM call DoSnapshotSet");
 
     IVssAsyncPtr pAsync;
     CHECK_COM(m_pVssObject->DoSnapshotSet(&pAsync));
@@ -81,7 +80,6 @@ void VssClient::SnapshotSetCreated()
 wstring VssClient::MountSnapshots(wstring driveLetters)
 {
     FunctionTracer ft(DBG_INFO);
-    ft.WriteLine(L"Mounting shadow copies ...");
     for (size_t i = 0; i < m_latestSnapshotSet.snapshots.size(); ++i)
     {
         // Find the drive letter to use
@@ -99,6 +97,7 @@ wstring VssClient::MountSnapshots(wstring driveLetters)
         wstring drive;
         drive += driveLetter;
         drive += L":"; // DefineDosDevice does not work with trailing backslash
+        ft.WriteInfoLine(L"Mounting shadow copy %s (%s)...", drive.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
         CHECK_WIN32(DefineDosDevice(NULL, drive.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str()));
 
         // Verify that the DOS device works (DefineDosDevice seems to return success regardless of target being invalid)
@@ -107,14 +106,12 @@ wstring VssClient::MountSnapshots(wstring driveLetters)
             NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
         CAutoHandle hDriveAutoCleanup(hDrive);
         if (INVALID_HANDLE_VALUE == hDrive) {
-            ft.WriteLine(L"ERROR: Mount %s of %s is not accessible!", drive.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
+            ft.WriteErrorLine(L"ERROR: Mount %s (%s) is not accessible!", drive.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
             throw(E_UNEXPECTED);
         }
 
         // Remember the mount drive to be able to unmount when done
         m_latestSnapshotSet.snapshots[i].mount = drive;
-        ft.WriteLine(L"- Mounted %s to %s", drive.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
-
     }
 
     return driveLetters;
@@ -123,23 +120,19 @@ wstring VssClient::MountSnapshots(wstring driveLetters)
 void VssClient::UnmountSnapshots()
 {
     FunctionTracer ft(DBG_INFO);
-
-    ft.WriteLine(L"Unounting shadow copies ... ");
-
-    // For each added volume add the ShadowRun.exe exposure command
     for (size_t i = 0; i < m_latestSnapshotSet.snapshots.size(); ++i)
     {
         if (!m_latestSnapshotSet.snapshots[i].mount.empty())
         {
+            ft.WriteInfoLine(L"Unmounting shadow copy %s (%s)...", m_latestSnapshotSet.snapshots[i].mount.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
             if (DefineDosDevice(DDD_REMOVE_DEFINITION | DDD_EXACT_MATCH_ON_REMOVE, m_latestSnapshotSet.snapshots[i].mount.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str()))
             {
-                ft.WriteLine(L"- Unmounted %s from %s", m_latestSnapshotSet.snapshots[i].mount.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
                 m_latestSnapshotSet.snapshots[i].mount.clear(); // Set empty so we know it no longer exists
             }
             else
             {
                 // Warn, but do not abort - continue unmounting what we can!
-                ft.WriteLine(L"- Unable to unmount %s from %s", m_latestSnapshotSet.snapshots[i].mount.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
+                ft.WriteInfoLine(L"Unable to unmount %s (%s)", m_latestSnapshotSet.snapshots[i].mount.c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
             }
         }
     }
@@ -171,7 +164,7 @@ void VssClient::UnmountSnapshotsSilent()
 void VssClient::GenerateEnvironmentScript(wstring stringFileName)
 {
     FunctionTracer ft(DBG_INFO);
-    ft.WriteLine(L"Generating the SETVAR script (%s) ... ", stringFileName.c_str());
+    ft.WriteInfoLine(L"Generating the SETVAR script (%s)...", stringFileName.c_str());
     wofstream ofile;
     ofile.open(WString2String(stringFileName).c_str());
     ofile << L"@echo.\n";
@@ -188,32 +181,39 @@ void VssClient::GenerateEnvironmentScript(wstring stringFileName)
     ofile.close();
 }
 
+void VssClient::SetProcessEnvironmentVariable(LPCWSTR name, LPCWSTR value)
+{
+    FunctionTracer ft(DBG_INFO);
+    CHECK_WIN32(SetEnvironmentVariable(name, value));
+    ft.WriteDebugLine(L"- %s=%s", name, value ? value : L"");
+}
+
 // Update environment variables of the current process, which will be inherited by created child process.
 void VssClient::SetProcessEnvironment()
 {
     FunctionTracer ft(DBG_INFO);
-    ft.WriteLine(L"Setting process environment variables ...");
-    CHECK_WIN32(SetEnvironmentVariable((LPCWSTR)L"SHADOW_SET_ID", m_latestSnapshotSet.idString.c_str()));
+    ft.WriteInfoLine(L"Setting shadow process environment variables...");
+    SetProcessEnvironmentVariable((LPCWSTR)L"SHADOW_SET_ID", m_latestSnapshotSet.idString.c_str());
     wostringstream stringBuilder;
     stringBuilder << m_latestSnapshotSet.snapshots.size();
-    CHECK_WIN32(SetEnvironmentVariable((LPCWSTR)L"SHADOW_SET_COUNT", stringBuilder.str().c_str()));
+    SetProcessEnvironmentVariable((LPCWSTR)L"SHADOW_SET_COUNT", stringBuilder.str().c_str());
     stringBuilder.str(std::wstring{});
     for (size_t i = 0; i < m_latestSnapshotSet.snapshots.size(); ++i)
     {
         stringBuilder << L"SHADOW_ID_" << i+1;
-        CHECK_WIN32(SetEnvironmentVariable(stringBuilder.str().c_str(), m_latestSnapshotSet.snapshots[i].idString.c_str()));
+        SetProcessEnvironmentVariable(stringBuilder.str().c_str(), m_latestSnapshotSet.snapshots[i].idString.c_str());
         stringBuilder.str(std::wstring{});
         stringBuilder << L"SHADOW_DEVICE_" << i+1;
-        CHECK_WIN32(SetEnvironmentVariable(stringBuilder.str().c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str()));
+        SetProcessEnvironmentVariable(stringBuilder.str().c_str(), m_latestSnapshotSet.snapshots[i].deviceName.c_str());
         stringBuilder.str(std::wstring{});
         stringBuilder << L"SHADOW_DRIVE_" << i+1;
         if (m_latestSnapshotSet.snapshots[i].mount.empty())
         {
-            CHECK_WIN32(SetEnvironmentVariable(stringBuilder.str().c_str(), NULL)); // Remove any existing
+            SetProcessEnvironmentVariable(stringBuilder.str().c_str(), NULL); // Remove any existing
         }
         else
         {
-            CHECK_WIN32(SetEnvironmentVariable(stringBuilder.str().c_str(), m_latestSnapshotSet.snapshots[i].mount.c_str()));
+            SetProcessEnvironmentVariable(stringBuilder.str().c_str(), m_latestSnapshotSet.snapshots[i].mount.c_str());
         }
         stringBuilder.str(std::wstring{});
     }

@@ -463,9 +463,15 @@ as vshadow for the specific functionality that shadowrun has focused on.
 
 The output messages printed from vshadow is a bit misleading when used for the purpose
 described here, since it is not the snapshot creation itself that is our main focus of
-attention but the executed command and the snapshot is more or less something that
-should just be done silently in the background. For this reason I have started
-changing the message strings printed so that it does not talk so much about "backup" etc.
+attention but the executed command. The snapshot is more or less something that should
+just be done silently in the background. For this reason I have done some improvements
+to output (logging). First of all a full log level option is introduced (-log-level).
+The original vshadow have an option to enable extensive tracing output, but nothing other
+than that, and the normal output is pretty verbose. In shadowrun the log level is now
+configurable. The default is less verbose than before, and can be set to silent so that
+nothing from shadowrun is printed and the only output will be that of the executed command.
+Also the messages has been cleaned up a bit, and they are rewritten a bit so that they
+do not so much mention "backup" etc.
 
 #### Build configuration
 
@@ -476,13 +482,15 @@ Windows Event Log with error messages from VSS regarding COM component not being
 
 ### Source code
 
-The source code is still based on the original source code from vshadow, it is not a complete
-rewrite, although smaller parts of it have been refactored, and of course lots of it removed,
-and some code added for the new features. This is something I might reconsider, but
-for now the risk of introducing more errors then I fix is too big. After all, vshadow has
-been in use for a long time, and if the source code from the open source repository is more or
-less the same as is used to build the exe included in Windows SDK then it has probably been
-trough some tough tests over the years.
+The source code is still based on the original source code from vshadow. Some smaller
+parts of it have been refactored, and of course, some code added for the new features,
+and many parts of the original code removed. Though, it is not a complete rewrite.
+And I know; it is not a very elegant implementation, definitely not modern C++.
+I might consider bigger refactoring, or even reimplementing, in future, but for now
+this this is a minimal effort project, and the risk of introducing more errors than
+I fix is too big. After all, vshadow has been in use for a long time, and if the source
+code from the open source repository is more or less the same as is used to build the exe
+included in Windows SDK then it has probably been trough some tough tests over the years.
 
 I have have not been very conscious about compiler version, language version etc.
 Using C++ standard features only, avoiding Microsoft specific features, are not considered

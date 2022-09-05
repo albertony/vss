@@ -8,8 +8,8 @@
 #define VER_PRODUCTNAME_STR         "ShadowRun"
 #define VER_FILETYPE                VFT_APP
 #define VER_FILESUBTYPE             VFT2_UNKNOWN
-#define VER_FILEDESCRIPTION_STR     "ShadowRun, Volume Shadow Copy Runner"
+#define VER_FILEDESCRIPTION_STR     "ShadowRun (Volume Shadow Copy Runner)"
 #define VER_INTERNALNAME_STR        "ShadowRun.exe"
-#define VER_LEGALCOPYRIGHT_STR      "Copyright (c) Albertony. All rights reserved."
+#define VER_LEGALCOPYRIGHT_STR      "Copyright (C) 2022 Albertony. All rights reserved."
 
 #include "common.ver"

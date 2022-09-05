@@ -32,7 +32,9 @@ void VssClient::Initialize()
 {
     FunctionTracer ft(DBG_INFO);
 
-    // Initialize COM 
+    ft.WriteInfoLine(L"Initializing VSS infrastructure...");
+
+    // Initialize COM
     CHECK_COM(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE));
     m_bCoInitializeCalled = true;
 
@@ -58,7 +60,8 @@ void VssClient::Initialize()
 
     // Set the context, different than the default context
     DWORD dwContext = VSS_CTX_FILE_SHARE_BACKUP; // Specifies an auto-release, nonpersistent shadow copy created without writer involvement.
-    ft.WriteLine(L"- Setting the VSS context to: 0x%08lx", dwContext);
+    ft.WriteDebugLine(L"Setting the VSS context to FILE_SHARE_BACKUP (0x%08lx)", dwContext);
+    ft.WriteDebugLine(L"Context is auto-release, nonpersistent shadow copy without writer involvement");
     CHECK_COM(m_pVssObject->SetContext(dwContext));
 
     // Set various properties per backup components instance
@@ -72,7 +75,7 @@ void VssClient::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
 {
     FunctionTracer ft(DBG_INFO);
 
-    ft.WriteLine(L"(Waiting for the asynchronous operation to finish...)");
+    ft.WriteInfoLine(L"Waiting for the asynchronous operation to finish...");
 
     // Wait until the async operation finishes
     CHECK_COM(pAsync->Wait());
@@ -84,10 +87,10 @@ void VssClient::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
     // Check if the async operation succeeded...
     if(FAILED(hrReturned))
     {
-        ft.WriteLine(L"Error during the last asynchronous operation.");
-        ft.WriteLine(L"- Returned HRESULT = 0x%08lx", hrReturned);
-        ft.WriteLine(L"- Error text: %s", FunctionTracer::HResult2String(hrReturned).c_str());
-        ft.WriteLine(L"- Please re-run ShadowRun.exe with the /tracing option to get more details");
+        ft.WriteErrorLine(L"Error during the last asynchronous operation.");
+        ft.WriteErrorLine(L"- Returned HRESULT = 0x%08lx", hrReturned);
+        ft.WriteErrorLine(L"- Error text: %s", FunctionTracer::HResult2String(hrReturned).c_str());
+        ft.WriteErrorLine(L"- Please re-run ShadowRun.exe with the -log-level=trace option to get more details");
         throw(hrReturned);
     }
 }
