@@ -96,7 +96,7 @@ void PrintUsage(bool startWithNewline)
         L"  -env               - Set process environment variables\n" // Added (not from orginal vshadow)
         L"  -mount             - Mount shadow copies as temporary drives\n" // Added (not from orginal vshadow)
         L"  -drive={ABC}       - Specific drive letters to use for mounting\n" // Added (not from orginal vshadow)
-        L"  -errorcode=1       - First exit code value to use for internal errors, not from the command\n" // Added (not from orginal vshadow)
+        L"  -error-code=1      - First exit code value to use for internal errors, not from the command\n" // Added (not from orginal vshadow)
         L"  -nq                - Do not force quotes around arguments specified with -arg or after -- with quotes\n" // Added (not from orginal vshadow)
         L"  -arg={string}      - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
         L"  -log-level={debug} - Log level, one of: trace, debug, info (default), notice (unused), error or silent\n" // Added (not from orginal vshadow), replaces tracing from original vshadow
@@ -224,8 +224,8 @@ int CommandLineParser::MainRoutine(vector<wstring>& arguments)
     FunctionTracer ft(DBG_INFO);
 
     // Exit codes:
-    // Customizable offset with -errorcode flag, to separate from executed command.
-    // Defaults (and if errors before -errorcode is parsed) are:
+    // Customizable offset with -error-code flag, to separate from executed command.
+    // Defaults (and if errors before -error-code is parsed) are:
     // 0 - Success
     // 1 - Object not found
     // 2 - Runtime Error
@@ -306,9 +306,9 @@ int CommandLineParser::MainRoutine(vector<wstring>& arguments)
                 continue;
             }
 
-            // Check for the errorcode option
+            // Check for the error-code option
             wstring value;
-            if (MatchArgument(arguments[argIndex], L"errorcode", value, true, false))
+            if (MatchArgument(arguments[argIndex], L"error-code", value, true, false))
             {
                 errorCodeStart = _wtoi(value.c_str());
                 if (errno == ERANGE || errorCodeStart == 0)

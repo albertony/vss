@@ -433,13 +433,13 @@ you can handle the exit code from shadowrun as you would when running the comman
 If shadowrun itself fails for some reason, then it will still set its own exit code, so
 if there is overlap with the exit codes used by your command you will not be able to tell
 from the exit code which of them it came from. To solve this there is a new option,
-`-errorcode`, which can be set to an integer value which will be used as an offset for
-exit code values that shadowrun should return. So if you set `-errorcode=1000` then
+`-error-code`, which can be set to an integer value which will be used as an offset for
+exit code values that shadowrun should return. So if you set `-error-code=1000` then
 you will get exit code 1000 instead of 1, 1001 instead of 2 and 1002 instead of 3.
 Then you can assume that, if exit code is non-zero then below 1000 it comes from the
 executed command, else it comes from vshadow.
 
-Added option: `-errorcode`
+Added option: `-error-code`
 
 #### Improved wait option
 
