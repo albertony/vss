@@ -1,9 +1,9 @@
 VShadow Volume Shadow Copy Service sample
 =========================================
 
-VShadow is a command-line tool that you can use to create and manage volume shadow copies. It is also a sample that demonstrates the use of the [Volume Shadow Copy Service](http://msdn.microsoft.com/en-us/library/windows/desktop/bb968832) (VSS) COM API.
+VShadow is a command-line tool that you can use to create and manage volume shadow copies. It is also a sample that demonstrates the use of the [Volume Shadow Copy Service](https://learn.microsoft.com/windows/win32/vss/volume-shadow-copy-service-portal) (VSS) COM API.
 
-For more information about the VSS tool and its command-line options, see [VShadow Tool and Sample](http://msdn.microsoft.com/en-us/library/windows/desktop/bb530725) and [VShadow Tool Examples](http://msdn.microsoft.com/en-us/library/windows/desktop/bb530726).
+For more information about the VSS tool and its command-line options, see [VShadow Tool and Sample](https://learn.microsoft.com/windows/win32/vss/vshadow-tool-and-sample) and [VShadow Tool Examples](https://learn.microsoft.com/windows/win32/vss/vshadow-tool-examples).
 
 This sample is written in C++ and requires some experience with COM.
 
@@ -37,23 +37,23 @@ This sample contains the following files:
 
 **Warning**  This sample requires Microsoft Visual Studio 2013 or a later version (any SKU) and will not compile in Microsoft Visual Studio Express 2013 for Windows.
 
-**Note**  The Windows-classic-samples repo contains a variety of code samples that exercise the various programming models, platforms, features, and components available in Windows and/or Windows Server. This repo provides a Visual Studio solution (SLN) file for each sample, along with the source files, assets, resources, and metadata needed to compile and run the sample. For more info about the programming models, platforms, languages, and APIs demonstrated in these samples, check out the documentation on the [Windows Dev Center](https://dev.windows.com). This sample is provided as-is in order to indicate or demonstrate the functionality of the programming models and feature APIs for Windows and/or Windows Server. This sample was created for Windows 8.1 and/or Windows Server 2012 R2 using Visual Studio 2013, but in many cases it will run unaltered using later versions. This sample was created for Windows 8.1 and/or Windows Server 2012 R2 using Visual Studio 2013, but in many cases it will run unaltered using later versions. Please provide feedback on this sample!
+**Note**  The Windows-classic-samples repo contains a variety of code samples that exercise the various programming models, platforms, features, and components available in Windows and/or Windows Server. This repo provides a Visual Studio solution (SLN) file for each sample, along with the source files, assets, resources, and metadata needed to compile and run the sample. For more info about the programming models, platforms, languages, and APIs demonstrated in these samples, check out the documentation on the [Windows Dev Center](https://developer.microsoft.com/windows/). This sample is provided as-is in order to indicate or demonstrate the functionality of the programming models and feature APIs for Windows and/or Windows Server. This sample was created for Windows 8.1 and/or Windows Server 2012 R2 using Visual Studio 2013, but in many cases it will run unaltered using later versions. This sample was created for Windows 8.1 and/or Windows Server 2012 R2 using Visual Studio 2013, but in many cases it will run unaltered using later versions. Please provide feedback on this sample!
 
-To get a copy of Windows, go to [Downloads and tools](http://go.microsoft.com/fwlink/p/?linkid=301696).
+To get a copy of Windows, go to [Software Download | Microsoft](https://www.microsoft.com/software-download).
 
-To get a copy of Visual Studio, go to [Visual Studio Downloads](http://go.microsoft.com/fwlink/p/?linkid=301697).
+To get a copy of Visual Studio, go to [Visual Studio Downloads | Microsoft](https://visualstudio.microsoft.com/downloads/).
 
 Related topics
 --------------
 
-[VShadow Tool and Sample](http://msdn.microsoft.com/en-us/library/windows/desktop/bb530725)
+[VShadow Tool and Sample](https://learn.microsoft.com/windows/win32/vss/vshadow-tool-and-sample)
 
-[VShadow Tool Examples](http://msdn.microsoft.com/en-us/library/windows/desktop/bb530726)
+[VShadow Tool Examples](https://learn.microsoft.com/windows/win32/vss/vshadow-tool-examples)
 
 Related technologies
 --------------------
 
-[Volume Shadow Copy Service](http://msdn.microsoft.com/en-us/library/windows/desktop/bb968832)
+[Volume Shadow Copy Service](https://learn.microsoft.com/windows/win32/vss/volume-shadow-copy-service-portal)
 
 Operating system requirements
 -----------------------------
