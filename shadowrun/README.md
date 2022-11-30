@@ -42,7 +42,7 @@ Because then:
 - The files (in the snapshot) are never locked by other programs.
 
 Following [below](#using-vshadow) is a description of how you can use the original vshadow utility
-to [achive this](#using-vshadow-with-rclone). Further down this site I [introduce](#introducing-shadowrun)
+to [achieve this](#using-vshadow-with-rclone). Further down this site I [introduce](#introducing-shadowrun)
 my own ShadowRun application where I have added improvements that makes the [solution](#using-shadowrun-with-rclone)
 easier, more flexible, and more robust.
 
