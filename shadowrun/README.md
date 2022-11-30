@@ -315,6 +315,7 @@ Exit codes from rclone.exe:
 
 
 ***
+
 ## Introducing ShadowRun
 
 To repeat myself from the introduction: ShadowRun is a utility based on Microsoft's feature packed
@@ -364,7 +365,7 @@ the current run.
 #### Arguments to the executed command
 
 Command line arguments to the exec command can be specified. The main executable must be specified
-with the `-exec` option as before, but any command arguments can now be specified with `arg=value`,
+with the `-exec` option as before, but any command arguments can now be specified with `-arg=value`,
 which can be repated. If number of arguments is large then this quickly makes the command line quite
 daunting, so an alternative method is to specify all arguments to shadowrun, then add a special `--`
 limiter, and then specify arguments that will be passed directly to the command as you would write them
@@ -372,20 +373,39 @@ when executing it directly.
 
 Added options: `-arg` and `--`
 
+##### Environment variable expansion
+
+Shadowrun basically just calls the `CreateProcess` Windows API function to execute the
+command specified with `-exec` (and any arguments). When running the Command Shell, `cmd.exe`,
+it will automatically expand environment variable references, which means you can run something
+like this (the `-nq` option will be explained in next chapter, about [quoting feature](#quoting)):
+
+```
+shadowrun.exe -env -mount -wait -nq -exec=C:\Windows\System32\cmd.exe C: -- /C dir %SHADOW_DRIVE_1%
+```
+
+Most other applications will not expand environment variables, though. For example Notepad
+will not, which means something like this would not work:
+
+```
+shadowrun.exe -env -mount -exec=C:\Windows\notepad.exe c: -- %SHADOW_DRIVE_1%\readme.txt
+```
+
+Shadowrun will therefore automatically expand any environment variable references within
+arguments specified with `-arg` or after `--`, using the `ExpandEnvironmentStrings` Windows
+API function, before supplying the result to the `CreateProcess` call. This means the
+example above with notepad will actually work (assuming the file exists). In case this
+is not desired, e.g. you want to supply an actual string in format `%name%` to the
+executable, you can add arguments `-ne` or `-no-expand` to disable the variable expansion.
+
+Added options: `-ne` and `-no-expand`
+
 ##### Quoting
 
 The default behavior is to ensure all arguments are surrounded by double quotes when the command
 is executed. This means that in most cases you don't have to do anything special, just specify
 the arguments as you normally would: Surround with double quotes if the value contain spaces,
 else you can skip the quotes.
-
-So you could run some sweet little single-liner like the following. No need to author a
-batch script for `-exec` in advance. No files will be generated, like with `-script`.
-Less "moving parts", usually means less risk of unexpected behaviour!
-
-```
-shadowrun.exe -env -mount -wait -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DRIVE_1%\Files remote: --dry-run --filter-from %SHADOW_DRIVE_1%\Files\.rclonefilter --exclude-if-present .rcloneignore --checkers 6 --transfers 6 --buffer-size 64M --jottacloud-md5-memory-limit 512M --include /Files/Pictures/**
-```
 
 Not all arguments can be quoted though. For example if you were to run the following
 command it would fail for same reason as when you try to execute "dir" including the
@@ -395,7 +415,7 @@ quotes in a command prompt ('"dir"' is not recognized as an internal or external
 shadowrun.exe -env -mount -wait -exec=C:\Windows\System32\cmd.exe C: -- /C dir %SHADOW_DRIVE_1%
 ```
 
-To solve this there is an option `-nq` ("no quoting") which disables the forced quoting.
+To solve this there is an option `-no-quote`, or `-nq`, which disables the forced quoting.
 This means, though, that it is a bit more cumbersome to specify values with space,
 which actually needs quoting: You have to surround them with triple quotes! The reason
 is that you need one pair of quotes for the value to appear as one entry from your
@@ -404,6 +424,7 @@ will "consume" the quotes, so when sending the value along to the exec command t
 would no be quoted. Therefore you need an additional pair of quotes for the exec command.
 But now you get the problem of quotes inside quotes, so you need some kind of escaping.
 Adding an extra quote is the best way to do this, so this means you need triple quoting
+
 ```
 -arg="""C:\Program Files"""
 ```
@@ -412,6 +433,8 @@ Note that the `-nq` option will only have effect for following arguments. So you
 specify some `-arg` entries first, then `-nq`, and then some more `-arg` which will
 have the "no quoting" behaviour. Since you cannot specify any program options after
 the `--`, all arguments given here will be affected by a `nq` option.
+
+Added options: `-nq` and `-no-quote`
 
 #### Pass-through exit code
 
@@ -516,8 +539,18 @@ original `vshadow` utility, we can be able to do this very easy with `shadowrun`
 shadowrun.exe -env -mount -exec=C:\Tools\Rclone\rclone.exe C: -- sync %SHADOW_DRIVE_1%\Data\ remote:Data
 ```
 
-We are using the added features for [setting process environment variables](#setting-process-environment-variables),
-[automatically mounting](#automatically-mounting) and [arguments to the executed command](#arguments-to-the-executed-command).
-We can also check the exit code, which will be the one from rclone, due to the added feature [pass-through exit code](#pass-through-exit-code).
+Or, as a bigger example, you can run a sweet little single-liner like this: 
 
-See description of the [quoting feature](#quoting) for description of possible quoting issues, and a more complex example.
+```
+shadowrun.exe -env -mount -wait -exec=C:\Tools\Rclone\rclone.exe C: -- sync "%SHADOW_DRIVE_1%\My Files" remote:Files --dry-run --filter-from "%SHADOW_DRIVE_1%\My Files\.rclonefilter" --exclude-if-present .rcloneignore --checkers 6 --transfers 6 --buffer-size 64M --jottacloud-md5-memory-limit 512M --include "/My Files/Pictures/**"
+```
+
+No need to author a batch script for `-exec` in advance. No files will be generated, like with `-script`.
+Less "moving parts", usually means less risk of unexpected behaviour!
+
+We are using the added features for [setting process environment variables](#setting-process-environment-variables),
+[environment variable expansion](#environment-variable-expansion), [automatically mounting](#automatically-mounting)
+and [arguments to the executed command](#arguments-to-the-executed-command).
+We can also check the exit code, which will be the one from rclone, due to the added
+feature [pass-through exit code](#pass-through-exit-code). See also the description of the [quoting feature](#quoting)
+for explanation of possible quoting issues.

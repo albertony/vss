@@ -437,7 +437,7 @@ inline wstring GetDisplayNameForVolume(wstring volumeName)
 
 
 // Execute a command
-inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteArguments)
+inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteArguments, bool expandArguments)
 {
     FunctionTracer ft(DBG_INFO);
 
@@ -472,12 +472,31 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteA
     command = wstring(L"\"") + command + wstring(L"\"");
     for (size_t i = 0; i < arguments.size(); ++i)
     {
+        wstring argument;
+        if (expandArguments)
+        {
+            // Replace any environment variable references in the form %variableName%
+            // with the current value of that environment variable.
+            DWORD bufferSize = ExpandEnvironmentStrings((LPCWSTR)arguments[i].c_str(), NULL, 0);
+            if (bufferSize == 0)
+            {
+                CHECK_WIN32(FALSE)
+            }
+            argument.resize(bufferSize - 1, L'\0');
+            // Since src and dst in ExpandEnvironmentStrings must be different buffers we
+            // use arguments[i] as src and argument as dst.
+            CHECK_WIN32(ExpandEnvironmentStrings((LPCWSTR)arguments[i].c_str(), WString2Buffer(argument), bufferSize))
+        }
+        else
+        {
+            argument = arguments[i];
+        }
         if (quoteArguments)
         {
             // Automatically add double quotes around the argument, in case it contains spaces etc.
             // This will not always work, e.g. command "cmd" with arguments "/c", "dir" and "c:\program files"
             // will fail ('"dir"' is not recognized as an internal or external command..).
-            command += wstring(L" \"") + arguments[i] + wstring(L"\"");
+            command += wstring(L" \"") + argument + wstring(L"\"");
         }
         else
         {
@@ -487,7 +506,7 @@ inline DWORD ExecCommand(wstring command, vector<wstring> arguments, bool quoteA
             // the outer pair of quotes and the inner quotes must be escaped in the shell
             // by doubling them). It will then work with command "cmd" and arguments
             // "/c", "dir" """c:\program files""".
-            command += wstring(L" ") + arguments[i];
+            command += wstring(L" ") + argument;
         }
     }
 

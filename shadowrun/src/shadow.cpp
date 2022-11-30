@@ -86,21 +86,22 @@ void PrintUsage(bool startWithNewline)
         L"   ShadowRun [flags] [volumes]\n"
         L"\n"
         L"List of flags:\n"
-        L"  -?                 - Displays this usage screen\n"
-        L"  -h                 - Displays this usage screen\n" // Added (not from orginal vshadow)
-        L"  -nw                - Create no-writer shadow copies (implied and deprecated, only for vshadow syntax compat)\n" // Implied, but kept for backwards compatibility with vshadow
-        L"  -script={file.cmd} - Environment variable configuration script creation\n"
-        L"  -exec={command}    - Custom command executed after shadow creation\n"
-        L"  -wait              - Wait before program termination\n"
-        L"  -tracing           - Runs ShadowRun.exe with enhanced diagnostics\n" // Deprecated, should use -log-level=trace instead, but kept for backwards compatibility with vshadow
-        L"  -env               - Set process environment variables\n" // Added (not from orginal vshadow)
-        L"  -mount             - Mount shadow copies as temporary drives\n" // Added (not from orginal vshadow)
-        L"  -drive={ABC}       - Specific drive letters to use for mounting\n" // Added (not from orginal vshadow)
-        L"  -error-code=1      - First exit code value to use for internal errors, not from the command\n" // Added (not from orginal vshadow)
-        L"  -nq                - Do not force quotes around arguments specified with -arg or after -- with quotes\n" // Added (not from orginal vshadow)
-        L"  -arg={string}      - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
-        L"  -log-level={debug} - Log level, one of: trace, debug, info (default), notice (unused), error or silent\n" // Added (not from orginal vshadow), replaces tracing from original vshadow
-        L"  -- {args}...       - Special flag that makes all following arguments being passed directly to the -exec\n" // Added (not from orginal vshadow)
+        L"  -?                  - Displays this usage screen\n"
+        L"  -h                  - Displays this usage screen\n" // Added (not from orginal vshadow)
+        L"  -nw                 - Create no-writer shadow copies (implied and deprecated, only for vshadow syntax compat)\n" // Implied, but kept for backwards compatibility with vshadow
+        L"  -script={file.cmd}  - Environment variable configuration script creation\n"
+        L"  -exec={command}     - Custom command executed after shadow creation\n"
+        L"  -wait               - Wait before program termination\n"
+        L"  -tracing            - Runs ShadowRun.exe with enhanced diagnostics\n" // Deprecated, should use -log-level=trace instead, but kept for backwards compatibility with vshadow
+        L"  -env                - Set process environment variables\n" // Added (not from orginal vshadow)
+        L"  -mount              - Mount shadow copies as temporary drives\n" // Added (not from orginal vshadow)
+        L"  -drive={ABC}        - Specific drive letters to use for mounting\n" // Added (not from orginal vshadow)
+        L"  -error-code=1       - First exit code value to use for internal errors, not from the command\n" // Added (not from orginal vshadow)
+        L"  -nq, -no-quote      - Do not force quotes around arguments specified with -arg or after --\n" // Added (not from orginal vshadow)
+        L"  -ne, -no-expand     - Do not expand environment variable references in arguments specified with -arg or after --\n" // Added (not from orginal vshadow)
+        L"  -arg={string}       - Argument to append after the -exec command, repeat or use -- for multiple arguments\n" // Added (not from orginal vshadow)
+        L"  -log-level={string} - Log level, one of: trace, debug, info (default), notice (unused), error or silent\n" // Added (not from orginal vshadow), replaces tracing from original vshadow
+        L"  -- {args}...        - Special flag that makes all following arguments being passed directly to the -exec\n" // Added (not from orginal vshadow)
     );
 }
 
@@ -246,7 +247,7 @@ int CommandLineParser::MainRoutine(vector<wstring>& arguments)
     // Mount shadow copy as drives
     bool mountSnapshots = false;
 
-    // Drive letters to use for mounting. Default is to use find next available.
+    // Drive letters to use for mounting. Default is to use find next available
     wstring mountDriveLetters;
 
     // Command/script to execute between snapshot creation and backup complete
@@ -258,7 +259,10 @@ int CommandLineParser::MainRoutine(vector<wstring>& arguments)
     // Force quotes around arguments specified with -arg or after -- with quotes
     bool addExecArgumentQuotes = true;
 
-    // Argument handling mode where all remaining arguments are just passed into execArguments.
+    // Expand environment variable references in arguments specified with -arg or after -- with quotes
+    bool expandExecArgumentEnvVars = true;
+
+    // Argument handling mode where all remaining arguments are just passed into execArguments
     bool passThrough = false;
 
     // Wait after shadow copy has been created
@@ -356,13 +360,21 @@ int CommandLineParser::MainRoutine(vector<wstring>& arguments)
                 ft.WriteDebugLine(L"- Including additional argument when executing binary/script '%s'", value.c_str());
                 continue;
             }
-
             // Do not force quotes around arguments specified with -arg or after --, when executing the command.
             // Note: For -arg this only has affect for the ones not already specified!
-            if (MatchArgument(arguments[argIndex], L"nq"))
+            if (MatchArgument(arguments[argIndex], L"nq") || MatchArgument(arguments[argIndex], L"no-quote"))
             {
-                ft.WriteDebugLine(L"- Do not force quotes around arguments specified with -arg or after -- with quotes");
-                addExecArgumentQuotes = false; // Variable logic reversed, so setting quoting=false
+                ft.WriteDebugLine(L"- Do not force quotes around arguments specified with -arg or after --");
+                addExecArgumentQuotes = false; // Variable logic reversed, so setting false
+                continue;
+            }
+
+            // Do not expand environment variable references in arguments specified with -arg or after --,
+            // when executing the command.
+            if (MatchArgument(arguments[argIndex], L"ne") || MatchArgument(arguments[argIndex], L"no-expand"))
+            {
+                ft.WriteDebugLine(L"- Do not expand environment variable references in arguments specified with -arg or after --");
+                expandExecArgumentEnvVars = false; // Variable logic reversed, so setting false
                 continue;
             }
 
@@ -432,7 +444,7 @@ int CommandLineParser::MainRoutine(vector<wstring>& arguments)
 
                 // Executing the custom command (optional)
                 if (execCommand.length() > 0)
-                    exitCode = ExecCommand(execCommand, execArguments, addExecArgumentQuotes);
+                    exitCode = ExecCommand(execCommand, execArguments, addExecArgumentQuotes, expandExecArgumentEnvVars);
 
                 if (waitBeforeCleanup)
                 {
