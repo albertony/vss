@@ -10,7 +10,7 @@ For details of the individual utilities, see individual readme files in the resp
 
 ### Motivation
 
-From [Microsoft TechNet Library](https://docs.microsoft.com/en-gb/windows-server/storage/file-server/volume-shadow-copy-service):
+From [Microsoft TechNet Library](https://docs.microsoft.com/windows-server/storage/file-server/volume-shadow-copy-service):
 > Backing up and restoring critical business data can be very complex due to the following issues:
 >  - The data usually needs to be backed up while the applications that produce the data are still running.
 >    This means that some of the data files might be open or they might be in an inconsistent state.
@@ -18,7 +18,7 @@ From [Microsoft TechNet Library](https://docs.microsoft.com/en-gb/windows-server
 
 ### About
 
-From [Wikipedia](https://en.wikipedia.org/wiki/Shadow_Copy):
+From [Wikipedia](https://wikipedia.org/wiki/Shadow_Copy):
 > Shadow Copy (also known as Volume Snapshot Service, Volume Shadow Copy Service or VSS) is a technology included
 > in Microsoft Windows that can create backup copies or snapshots of computer files or volumes, even when they are
 > in use. It is implemented as a Windows service called the Volume Shadow Copy service. A software VSS provider
@@ -27,7 +27,7 @@ From [Wikipedia](https://en.wikipedia.org/wiki/Shadow_Copy):
 > created on local and external (removable or network) volumes by any Windows component that uses this technology,
 > such as when creating a scheduled Windows Backup or automatic System Restore point.
 
-From [Microsoft in Windows Developer Center](https://docs.microsoft.com/en-gb/windows/win32/vss/volume-shadow-copy-service-portal):
+From [Microsoft in Windows Developer Center](https://docs.microsoft.com/windows/win32/vss/volume-shadow-copy-service-portal):
 > The Volume Shadow Copy Service (VSS) is a set of COM interfaces that implements a framework to allow volume
 > backups to be performed while applications on a system continue to write to the volumes.
 
@@ -65,20 +65,20 @@ List Writers          - List subscribed volume shadow copy writers
 Resize ShadowStorage  - Resize a volume shadow copy storage association
 ```
 
-(https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/cc754968(v=ws.11))
+https://learn.microsoft.com/windows-server/administration/windows-commands/vssadmin
 
 #### VShadow
 
 VShadow is a more advanced command-line tool that you can use to also create and manage many aspects of volume shadow copies.
 It is not included in Windows, but in Windows SDK which you would normally install as part of Visual Studio, but can
-also download and install from [Microsoft Developer Downloads](https://developer.microsoft.com/en-us/windows/downloads/).
+also download and install from [Microsoft Developer Downloads](https://developer.microsoft.com/windows/downloads/).
 
-It is actually intended as a sample for demonstrating the use of the [Volume Shadow Copy Service](https://docs.microsoft.com/en-gb/windows/win32/vss/volume-shadow-copy-service-portal) (VSS) COM API.
+It is actually intended as a sample for demonstrating the use of the [Volume Shadow Copy Service](https://docs.microsoft.com/windows/win32/vss/volume-shadow-copy-service-portal) (VSS) COM API.
 It even bears the name "Volume Shadow Copy **sample client**", still, but even so it is highly usable.
 
 For more information about the VShadow tool and its command-line options,
-see [VShadow Tool and Sample](https://docs.microsoft.com/en-gb/windows/win32/vss/vshadow-tool-and-sample)
-and [VShadow Tool Examples](https://docs.microsoft.com/en-gb/windows/win32/vss/vshadow-tool-examples).
+see [VShadow Tool and Sample](https://docs.microsoft.com/windows/win32/vss/vshadow-tool-and-sample)
+and [VShadow Tool Examples](https://docs.microsoft.com/windows/win32/vss/vshadow-tool-examples).
 
 The source code (C++) is published in [Windows classic samples](https://github.com/microsoft/Windows-classic-samples/tree/master/Samples/VShadowVolumeShadowCopy) repository, with Visual Studio project file ready
 for building (requires ATL, but other than that no external dependencies). License is MIT, with basically the
@@ -143,13 +143,13 @@ List of commands:
   -addresync={SnapID}             - Resync the given shadow copy to it's original volume
   -resync=bcd.xml                 - Perform Resync using the specified BCD
 ```
-(https://docs.microsoft.com/en-us/windows/win32/vss/vshadow-tool-and-sample)
+(https://docs.microsoft.com/windows/win32/vss/vshadow-tool-and-sample)
 
 #### Diskshadow
 
 Documented here, but not sure if this is still availble?
 
-https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/diskshadow
+https://docs.microsoft.com/windows-server/administration/windows-commands/diskshadow
 
 
 ## VSS administration utilities
