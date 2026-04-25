@@ -50,6 +50,13 @@ Windows has a built-in backup feature, which also utilizes VSS.
 
 ### Administration
 
+The "Volume Shadow Copy sample client" (vshadow.exe) utility can be used for some basic
+administration of volume shadow copies, like listing the existing volume shadow copies
+on the system, delete specific ones etc. Windows 10 includes a utility called
+"Volume Shadow Copy Service administrative command-line tool" (vssadmin.exe),
+which can do some of the same most basic this (list and delete). It does not support
+the creation of new ones though, there are a lot more functionality in vshadow.
+
 #### Vssadmin
 
 Very basic command line utility included in Windows which displays basic information about volume shadow copies, and lets you delete
@@ -151,15 +158,51 @@ Documented here, but not sure if this is still availble?
 
 https://docs.microsoft.com/windows-server/administration/windows-commands/diskshadow
 
+#### WMI
 
-## VSS administration utilities
+Microsoft includes a WMI provider [vsswmi](https://learn.microsoft.com/previous-versions/windows/desktop/vsswmi)
+for Volume Shadow Copy features, where the primary class is
+[Win32_ShadowCopy](https://learn.microsoft.com/previous-versions/windows/desktop/vsswmi/win32-shadowcopy).
+This makes it easy accessible from PowerShell, as shown in examples below, but it is not as flexible
+and does not support all the features of VShadow and others.
 
-The "Volume Shadow Copy sample client" (vshadow.exe) utility can be used for some basic
-administration of volume shadow copies, like listing the existing volume shadow copies
-on the system, delete specific ones etc. Windows 10 includes a utility called
-"Volume Shadow Copy Service administrative command-line tool" (vssadmin.exe),
-which can do some of the same most basic this (list and delete). It does not support
-the creation of new ones though, there are a lot more functionality in vshadow.
+To list existing snapshots:
+
+```powershell
+Get-CimInstance -ClassName Win32_ShadowCopy | Format-Table
+```
+
+To create new snapshot:
+
+```powershell
+$ShadowCopyResult = Invoke-CimMethod -ClassName Win32_ShadowCopy -MethodName Create -Arguments @{ Volume = "C:\" } # Trailing path separator is required
+$ShadowCopy = Get-CimInstance -ClassName Win32_ShadowCopy | Where-Object -Property ID -EQ $ShadowCopyResult.ShadowID
+$ShadowDevice = Get-CimInstance -ClassName Win32_ShadowCopy | Where-Object -Property ID -EQ $ShadowCopyResult.ShadowID | Select-Object -ExpandProperty DeviceObject
+```
+
+Note that `$ShadowCopyResult.ReturnValue` is not verified above; integer 0 means success, 1 access denied etc,
+see: https://learn.microsoft.com/previous-versions/windows/desktop/vsswmi/create-method-in-class-win32-shadowcopy#return-value.
+
+Note that this will always create a persistent no-writer shadow copy.
+
+Variable `$ShadowDevice` is now the path as a string similar to `"\\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy4"`.
+Some applications may support using this directly, but others do not. To make it more globally accessible, create
+a symbolic link for it (trailing path separator required)
+
+```powershell
+CMD /C MKLINK /D "C:\ShadowCopy" "${ShadowDevice}\"
+```
+To remove the symbolic link:
+
+```powershell
+CMD /C RMDIR C:\ShadowCopy\
+```
+
+To remove the shadow copy:
+
+```powershell
+$ShadowCopy | Remove-CimInstance
+```
 
 ## Projects in this repository
 
@@ -183,7 +226,7 @@ application to work (the 32-bit build will fail with COM related errors).
 ### ShadowRun
 
 My own project for a utility based on the VShadow source code, but focused on a very specific feature:
-The creation of temporary read-only shadow copy and running of a specified utility that
+The creation of temporary instant read-only shadow copy and running of a specified utility that
 can work on this, before it is cleaned up.
 
 See separate readme in [/shadowrun](https://github.com/albertony/vss/tree/master/shadowrun).
@@ -210,13 +253,13 @@ contains upgraded project file for Visual Studio 2013.
 
 The executable included in Windows 10 SDK, which identifies itself as version 3.0:
 * Does support UNC paths (like the Win8 version)
-    * You can check by executing a command like the following (the file exec.cmd must exist):
-	 `vshadow -nw -script=temp.cmd -exec=exec.cmd C: somethingrandom`
-	* The Win7 version will write "Parameter %s is expected to be a volume!"
-	* The Win8 version will write "Parameter %s is expected to be a volume **or a file share path**!"
+  * You can check by executing a command like the following (the file exec.cmd must exist):
+      `vshadow -nw -script=temp.cmd -exec=exec.cmd C: somethingrandom`
+  * The Win7 version will write "Parameter %s is expected to be a volume!"
+  * The Win8 version will write "Parameter %s is expected to be a volume **or a file share path**!"
 * Is built with VSS_SERVER preprocessor directive (like the Win7 version)
-	* You can see it from the help text printed when executing `vshadow /?`,
-	  a lot of options are only shown when VSS_SERVER is enabled, for example the option `-nw`.
+  * You can see it from the help text printed when executing `vshadow /?`,
+    a lot of options are only shown when VSS_SERVER is enabled, for example the option `-nw`.
 
 I guess the Windows 10 SDK inluded version is based on the Win8 version (if its even built on the same source, although
 the Windows 10 SDK included exeuctable still calls itself by the same "sample client" name and with a copyright statement
